@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Libro Diario - Registro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        body { background-color: #f8f9fa; }
+        
+        .table-ledger {
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .table-ledger thead th {
+            background-color: #2c3e50;
+            color: #ffffff;
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            border: 1px solid #455a64;
+        }
+        .cuenta-principal { font-weight: bold; color: #212529; }
+        .subcuenta {
+            padding-left: 3rem !important; 
+            color: #495057;
+            font-style: italic;
+        }
+        .monto {
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 500;
+        }
+        .fecha-col {
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+            color: #212529;
+        }
+        
+        /* Panel de controles */
+        .control-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 4px solid #0d6efd;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid px-5 mt-4 mb-5">
+    <!-- Encabezado -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-4">
+            <a href="index.html" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Volver al Menú
+            </a>
+        </div>
+        <div class="col-md-4 text-center">
+            <h2 class="fw-bold text-primary mb-0">Libro Diario</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-secondary fs-6">Nuevo Asiento</span>
+        </div>
+    </div>
+
+    <!-- Panel de Ingreso de Datos -->
+   <!-- Panel de Ingreso de Datos -->
+    <div class="control-panel">
+        <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Fecha</label>
+                <input type="date" id="inputFecha" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">1. Cuenta Principal</label>
+                <select id="selectPrincipal" class="form-select form-select-sm" onchange="alCambiarPrincipal()">
+                    <option value="">Cargando catálogo...</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">2. Subcuenta</label>
+                <select id="selectSubcuenta" class="form-select form-select-sm" onchange="alCambiarSubcuenta()" disabled>
+                    <option value="">-- Seleccione primero una cuenta principal --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Código (Subcuenta)</label>
+                <input type="text" id="inputCodigo" class="form-control form-control-sm" readonly placeholder="Auto">
+            </div>
+        </div>
+        
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                
+                <input class="form-check-input d-none" type="checkbox" id="checkSubcuenta">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Debe ($)</label>
+                <input type="number" id="inputDebe" class="form-control form-control-sm" step="0.01" min="0" value="0.00">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Haber ($)</label>
+                <input type="number" id="inputHaber" class="form-control form-control-sm" step="0.01" min="0" value="0.00">
+            </div>
+            <div class="col-md-2">
+                <button onclick="agregarLinea()" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-plus-lg"></i> Agregar Línea
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Tabla Dinámica del Asiento -->
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered table-ledger align-middle" id="tablaAsiento">
+            <thead>
+                <tr>
+                    <th width="10%">Fecha</th>
+                    <th width="45%">Concepto / Asiento</th>
+                    <th width="15%">Parcial ($)</th>
+                    <th width="15%">Debe ($)</th>
+                    <th width="15%">Haber ($)</th>
+                    <th width="5%">Acción</th>
+                </tr>
+            </thead>
+            <tbody id="cuerpoTabla">
+             
+            </tbody>
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td colspan="3" class="text-end">TOTALES:</td>
+                    <td class="monto text-primary" id="totalDebe">0.00</td>
+                    <td class="monto text-primary" id="totalHaber">0.00</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="text-end mt-3">
+        <input type="text" id="inputDescripcion" class="form-control d-inline-block w-25 me-2" placeholder="Descripción general del asiento (Ej. Venta del día)">
+        <button onclick="guardarAsientoBD()" class="btn btn-success px-4">
+            <i class="bi bi-save"></i> Guardar Asiento Completo
+        </button>
+    </div>
+</div>
+
+<script src="js/libro-diario.js"></script>
+</body>
+</html>
