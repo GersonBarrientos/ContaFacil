@@ -210,11 +210,11 @@ async function guardarAsientoBD() {
 
     const descripcion = document.getElementById('inputDescripcion').value || "Registro manual";
     
-    // Solo enviamos a BD las líneas que tengan un código (Subcuentas)
+    // Filtramos las líneas que tienen un código de subcuenta válido para la base de datos
     const detallesParaBD = lineasAsiento
-        .filter(l => l.codigo !== '') 
+        .filter(l => l.codigo !== '') // Solo enviamos las filas que tienen subcuenta vinculada
         .map(l => ({
-            codigo: l.codigo,
+            codigo: l.codigo,         // Aquí enviamos el código (ej. "110101") que exige la base de datos
             debe: l.debe,
             haber: l.haber
         }));
@@ -246,6 +246,9 @@ async function guardarAsientoBD() {
         alert("Error de conexión con el servidor Node.js");
     }
 }
+
+
+
 // Función para eliminar una línea de la tabla temporal
 function eliminarLinea(index) {
     lineasAsiento.splice(index, 1);

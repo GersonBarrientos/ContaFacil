@@ -54,12 +54,53 @@
     </style>
 </head>
 <body>
+<!-- Barra de Navegación Principal -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <div class="container-fluid px-4">
+        <!-- Logo / Nombre del Sistema -->
+        <a class="navbar-brand fw-bold" href="index.html">
+            <i class="bi bi-calculator"></i> ContaFácil
+        </a>
+        
+        <!-- Botón para móviles -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Enlaces del Menú -->
+        <div class="collapse navbar-collapse" id="menuPrincipal">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link px-3" href="index.html">
+                        <i class="bi bi-house-door"></i> Inicio
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link px-3" href="libro-diario.html">
+                        <i class="bi bi-journal-plus"></i> Registro de Partidas
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link px-3" href="historial-diario.html">
+                        <i class="bi bi-journal-text"></i> Historial de Asientos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link px-3 text-warning" href="#">
+                        <i class="bi bi-box-seam"></i> Kardex (Próximamente)
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
 
 <div class="container-fluid px-5 mt-4 mb-5">
     <!-- Encabezado -->
     <div class="row mb-4 align-items-center">
         <div class="col-md-4">
-            <a href="index.html" class="btn btn-outline-secondary btn-sm">
+            <a href="index.html" class="btn btn-outline-secondary btn-sm shadow-sm">
                 <i class="bi bi-arrow-left"></i> Volver al Menú
             </a>
         </div>
@@ -67,88 +108,106 @@
             <h2 class="fw-bold text-primary mb-0">Libro Diario</h2>
         </div>
         <div class="col-md-4 text-end">
-            <span class="badge bg-secondary fs-6">Nuevo Asiento</span>
+            <span class="badge bg-secondary fs-6 shadow-sm">Nuevo Asiento</span>
         </div>
     </div>
 
-    <!-- Panel de Ingreso de Datos -->
-   <!-- Panel de Ingreso de Datos -->
-    <div class="control-panel">
-        <div class="row g-3 align-items-end mb-3">
-            <div class="col-md-2">
-                <label class="form-label small fw-bold">Fecha</label>
-                <input type="date" id="inputFecha" class="form-control form-control-sm">
+    <!-- Panel de Ingreso de Datos (Tarjeta Mejorada) -->
+    <div class="card shadow-sm mb-4 border-0 bg-light">
+        <div class="card-body">
+            <h6 class="card-title text-muted mb-3 fw-bold"><i class="bi bi-pencil-square"></i> Detalle del movimiento</h6>
+            
+            <!-- Fila 1: Clasificación de Cuentas -->
+            <div class="row g-3 align-items-end mb-3">
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Fecha</label>
+                    <input type="date" id="inputFecha" class="form-control form-control-sm shadow-sm">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">1. Cuenta Principal</label>
+                    <select id="selectPrincipal" class="form-select form-select-sm shadow-sm" onchange="alCambiarPrincipal()">
+                        <option value="">Cargando catálogo...</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">2. Subcuenta</label>
+                    <select id="selectSubcuenta" class="form-select form-select-sm shadow-sm" onchange="alCambiarSubcuenta()" disabled>
+                        <option value="">-- Seleccione primero una cuenta principal --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Código (Subcuenta)</label>
+                    <input type="text" id="inputCodigo" class="form-control form-control-sm bg-white shadow-sm" readonly placeholder="Auto">
+                </div>
             </div>
-            <div class="col-md-4">
-                <label class="form-label small fw-bold">1. Cuenta Principal</label>
-                <select id="selectPrincipal" class="form-select form-select-sm" onchange="alCambiarPrincipal()">
-                    <option value="">Cargando catálogo...</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label small fw-bold">2. Subcuenta</label>
-                <select id="selectSubcuenta" class="form-select form-select-sm" onchange="alCambiarSubcuenta()" disabled>
-                    <option value="">-- Seleccione primero una cuenta principal --</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-bold">Código (Subcuenta)</label>
-                <input type="text" id="inputCodigo" class="form-control form-control-sm" readonly placeholder="Auto">
-            </div>
-        </div>
-        
-        <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-                
-                <input class="form-check-input d-none" type="checkbox" id="checkSubcuenta">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-bold">Debe ($)</label>
-                <input type="number" id="inputDebe" class="form-control form-control-sm" step="0.01" min="0" value="0.00">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-bold">Haber ($)</label>
-                <input type="number" id="inputHaber" class="form-control form-control-sm" step="0.01" min="0" value="0.00">
-            </div>
-            <div class="col-md-2">
-                <button onclick="agregarLinea()" class="btn btn-primary btn-sm w-100">
-                    <i class="bi bi-plus-lg"></i> Agregar Línea
-                </button>
+            
+            <!-- Fila 2: Montos y Acción -->
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <!-- Checkbox oculto necesario para tu lógica JS -->
+                    <input class="form-check-input d-none" type="checkbox" id="checkSubcuenta">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-primary">Debe ($)</label>
+                    <input type="number" id="inputDebe" class="form-control form-control-sm border-primary shadow-sm" step="0.01" min="0" value="0.00">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-success">Haber ($)</label>
+                    <input type="number" id="inputHaber" class="form-control form-control-sm border-success shadow-sm" step="0.01" min="0" value="0.00">
+                </div>
+                <div class="col-md-2">
+                    <button onclick="agregarLinea()" class="btn btn-primary btn-sm w-100 shadow-sm fw-bold">
+                        <i class="bi bi-plus-lg"></i> Agregar Línea
+                    </button>
+                </div>
             </div>
         </div>
     </div>
+
     <!-- Tabla Dinámica del Asiento -->
-    <div class="table-responsive">
-        <table class="table table-hover table-bordered table-ledger align-middle" id="tablaAsiento">
-            <thead>
+    <div class="table-responsive shadow-sm rounded border-0 mb-4">
+        <table class="table table-hover table-bordered table-ledger align-middle mb-0" id="tablaAsiento">
+            <thead class="table-dark">
                 <tr>
                     <th width="10%">Fecha</th>
                     <th width="45%">Concepto / Asiento</th>
                     <th width="15%">Parcial ($)</th>
                     <th width="15%">Debe ($)</th>
                     <th width="15%">Haber ($)</th>
-                    <th width="5%">Acción</th>
+                    <th width="5%" class="text-center">Acción</th>
                 </tr>
             </thead>
-            <tbody id="cuerpoTabla">
+            <tbody id="cuerpoTabla" class="bg-white">
              
             </tbody>
             <tfoot>
                 <tr class="table-light fw-bold">
-                    <td colspan="3" class="text-end">TOTALES:</td>
-                    <td class="monto text-primary" id="totalDebe">0.00</td>
-                    <td class="monto text-primary" id="totalHaber">0.00</td>
+                    <td colspan="3" class="text-end text-muted">TOTALES:</td>
+                    <td class="monto text-primary fs-6" id="totalDebe">0.00</td>
+                    <td class="monto text-primary fs-6" id="totalHaber">0.00</td>
                     <td></td>
                 </tr>
             </tfoot>
         </table>
     </div>
 
-    <div class="text-end mt-3">
-        <input type="text" id="inputDescripcion" class="form-control d-inline-block w-25 me-2" placeholder="Descripción general del asiento (Ej. Venta del día)">
-        <button onclick="guardarAsientoBD()" class="btn btn-success px-4">
-            <i class="bi bi-save"></i> Guardar Asiento Completo
-        </button>
+    <!-- Sección de Guardado Final -->
+    <div class="card shadow-sm border-0 bg-light">
+        <div class="card-body p-3">
+            <div class="row align-items-center g-3">
+                <div class="col-md-8">
+                    <div class="input-group input-group-sm shadow-sm">
+                        <span class="input-group-text bg-white fw-bold text-muted">Concepto general:</span>
+                        <input type="text" id="inputDescripcion" class="form-control" placeholder="Ej. Venta del día al contado...">
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button onclick="guardarAsientoBD()" class="btn btn-success btn-sm w-100 fw-bold shadow-sm">
+                        <i class="bi bi-save"></i> Guardar Asiento Completo
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

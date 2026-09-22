@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             let sumDebe = 0;
             let sumHaber = 0;
 
-            let filasHTML = '';
+          let filasHTML = '';
             asiento.detalles.forEach(det => {
                 const debeVal = Number(det.Debe) || 0;
                 const haberVal = Number(det.Haber) || 0;
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 filasHTML += `
                     <tr>
-                        <td><small class="text-muted">[${det.CodigoSubcuenta}]</small> ${det.NombreSubcuenta}</td>
+                        <td><small class="text-muted">[${det.CodigoSubcuenta}]</small> ${det.CuentaPrincipal}</td>
                         <td class="monto">${debeVal > 0 ? debeVal.toLocaleString('en-US', {minimumFractionDigits: 2}) : ''}</td>
                         <td class="monto">${haberVal > 0 ? haberVal.toLocaleString('en-US', {minimumFractionDigits: 2}) : ''}</td>
                     </tr>
