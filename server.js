@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 require('dotenv').config();
 
 const apiRoutes = require('./routes/index');
@@ -7,7 +6,6 @@ const apiRoutes = require('./routes/index');
 const app = express();
 
 // Middlewares
-app.use(cors());
 app.use(express.json()); 
 
 // VISTA

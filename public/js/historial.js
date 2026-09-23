@@ -1,3 +1,11 @@
+// Escapa texto antes de insertarlo en innerHTML para evitar XSS almacenado,
+// ya que Descripcion, CuentaPrincipal, etc. vienen de datos ingresados por el usuario.
+function escapeHTML(texto) {
+    const div = document.createElement('div');
+    div.textContent = texto ?? '';
+    return div.innerHTML;
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         const respuesta = await fetch('/api/historial');
@@ -7,7 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         contenedor.innerHTML = '';
 
         if (datos.length === 0) {
-            contenedor.innerHTML = `<div class="alert.alert-info text-center">No hay asientos registrados todavía.</div>`;
+            contenedor.innerHTML = `<div class="alert alert-info text-center">No hay asientos registrados todavía.</div>`;
             return;
         }
 
@@ -42,7 +50,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 filasHTML += `
                     <tr>
-                        <td><small class="text-muted">[${det.CodigoSubcuenta}]</small> ${det.CuentaPrincipal}</td>
+                        <td><small class="text-muted">[${escapeHTML(det.CodigoSubcuenta)}]</small> ${escapeHTML(det.CuentaPrincipal)}</td>
                         <td class="monto">${debeVal > 0 ? debeVal.toLocaleString('en-US', {minimumFractionDigits: 2}) : ''}</td>
                         <td class="monto">${haberVal > 0 ? haberVal.toLocaleString('en-US', {minimumFractionDigits: 2}) : ''}</td>
                     </tr>
@@ -56,7 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         <span><i class="bi bi-calendar-event"></i> ${fechaFormateada}</span>
                     </div>
                     <div class="card-body bg-white">
-                        <p class="text-muted mb-3"><strong>Concepto General:</strong> ${asiento.descripcion}</p>
+                        <p class="text-muted mb-3"><strong>Concepto General:</strong> ${escapeHTML(asiento.descripcion)}</p>
                         <div class="table-responsive">
                             <table class="table table-bordered table-hover align-middle mb-0">
                                 <thead class="table-light">

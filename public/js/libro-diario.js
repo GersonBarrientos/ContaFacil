@@ -4,9 +4,15 @@ let cuentasAgrupadas = {}; // Guardará el catálogo estructurado
 // 1. Cargar el catálogo al iniciar la página
 document.addEventListener("DOMContentLoaded", async () => {
     try {
-        const respuesta = await fetch('/api/cuentas'); 
-        const cuentas = await respuesta.json();
-        
+        const respuesta = await fetch('/api/cuentas');
+        const data = await respuesta.json();
+
+        if (!respuesta.ok || !Array.isArray(data)) {
+            throw new Error(data && data.error ? data.error : 'Respuesta inválida del servidor');
+        }
+
+        const cuentas = data;
+
         // Agrupar las cuentas por su Categoría
         cuentas.forEach(cuenta => {
             if (!cuentasAgrupadas[cuenta.Categoria]) {
@@ -17,7 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const selectPrincipal = document.getElementById('selectPrincipal');
         selectPrincipal.innerHTML = '<option value="">-- Seleccione Cuenta Principal --</option>';
-        
+
         // Llenar el primer menú solo con los nombres de las cuentas principales
         for (const categoria of Object.keys(cuentasAgrupadas)) {
             const opt = document.createElement('option');
@@ -27,7 +33,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     } catch (error) {
         console.error("Error cargando el catálogo:", error);
-        document.getElementById('selectPrincipal').innerHTML = '<option value="">Error de conexión</option>';
+        const selectPrincipal = document.getElementById('selectPrincipal');
+        if (selectPrincipal) {
+            selectPrincipal.innerHTML = '<option value="">Error de conexión</option>';
+        }
     }
 });
 
@@ -52,7 +61,7 @@ function alCambiarPrincipal() {
 
     // Habilitar y llenar el menú de subcuentas vinculado a esta principal
     selectSubcuenta.disabled = false;
-    selectSubcuenta.innerHTML = '<option value="">-- Ninguna (Registro de Mayor) --</option>';
+    selectSubcuenta.innerHTML = '<option value="">-- Seleccione una Subcuenta --</option>';
     
     cuentasAgrupadas[categoria].forEach(sub => {
         const opt = document.createElement('option');
@@ -90,6 +99,11 @@ function agregarLinea() {
         return;
     }
 
+    if (selectSubcuenta.value === "") {
+        alert("Debe seleccionar una Subcuenta. Todo movimiento debe registrarse en una subcuenta para poder guardarse en la base de datos.");
+        return;
+    }
+
     const debe = parseFloat(document.getElementById('inputDebe').value) || 0;
     const haber = parseFloat(document.getElementById('inputHaber').value) || 0;
 
@@ -104,45 +118,31 @@ function agregarLinea() {
 
     const categoriaPrincipal = selectPrincipal.value;
 
-    // CASO 1: Si seleccionó una subcuenta, agregamos DOS líneas automáticamente: 
-    // 1. La Cuenta Principal (en el Debe o Haber)
-    // 2. La Subcuenta (con sangría y en la columna Parcial)
-    if (selectSubcuenta.value !== "") {
-        const opcionSub = selectSubcuenta.options[selectSubcuenta.selectedIndex];
-        const nombreSubcuenta = opcionSub.dataset.nombre;
-        const codigoSubcuenta = opcionSub.value;
+    // Siempre agregamos DOS líneas: la Cuenta Principal (visual) y la Subcuenta
+    // (con su código, que es lo que realmente se guarda en la base de datos).
+    const opcionSub = selectSubcuenta.options[selectSubcuenta.selectedIndex];
+    const nombreSubcuenta = opcionSub.dataset.nombre;
+    const codigoSubcuenta = opcionSub.value;
 
-        // A. Insertar la Cuenta Principal visualmente
-        lineasAsiento.push({
-            fecha: fecha,
-            codigo: "",
-            concepto: categoriaPrincipal,
-            debe: debe,
-            haber: haber,
-            esSubcuenta: false
-        });
+    // A. Insertar la Cuenta Principal visualmente
+    lineasAsiento.push({
+        fecha: fecha,
+        codigo: "",
+        concepto: categoriaPrincipal,
+        debe: debe,
+        haber: haber,
+        esSubcuenta: false
+    });
 
-        // B. Insertar la Subcuenta abajo con su código para la BD
-        lineasAsiento.push({
-            fecha: fecha,
-            codigo: codigoSubcuenta,
-            concepto: nombreSubcuenta,
-            debe: debe,
-            haber: haber,
-            esSubcuenta: true
-        });
-
-    } else {
-        // CASO 2: Si dejó la subcuenta en "-- Ninguna --", solo agrega la Cuenta Principal
-        lineasAsiento.push({
-            fecha: fecha,
-            codigo: "",
-            concepto: categoriaPrincipal,
-            debe: debe,
-            haber: haber,
-            esSubcuenta: false
-        });
-    }
+    // B. Insertar la Subcuenta abajo con su código para la BD
+    lineasAsiento.push({
+        fecha: fecha,
+        codigo: codigoSubcuenta,
+        concepto: nombreSubcuenta,
+        debe: debe,
+        haber: haber,
+        esSubcuenta: true
+    });
 
     renderizarTabla();
     
