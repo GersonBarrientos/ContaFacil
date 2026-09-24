@@ -1,9 +1,20 @@
 let lineasAsiento = [];
 let cuentasAgrupadas = {}; // Guardará el catálogo estructurado
+const idEmpresa = Number(localStorage.getItem('idEmpresa') || 1);
 
 // 1. Cargar el catálogo al iniciar la página
 document.addEventListener("DOMContentLoaded", async () => {
     try {
+        const librosResponse = await fetch(`/api/libros?idEmpresa=${idEmpresa}`);
+        const libros = await librosResponse.json();
+        if (!librosResponse.ok || !Array.isArray(libros)) {
+            throw new Error(libros.error || 'No se pudieron cargar los libros. Verifica la migración y la conexión a Supabase.');
+        }
+        const selectLibro = document.getElementById('selectLibro');
+        selectLibro.innerHTML = '<option value="">-- Seleccione libro --</option>';
+        libros.forEach(libro => {
+            selectLibro.innerHTML += `<option value="${libro.id_libro}">${libro.nombre_libro}</option>`;
+        });
         const respuesta = await fetch('/api/cuentas'); 
         const cuentas = await respuesta.json();
         
@@ -27,6 +38,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     } catch (error) {
         console.error("Error cargando el catálogo:", error);
+        const selectLibro = document.getElementById('selectLibro');
+        if (selectLibro) selectLibro.innerHTML = `<option value="">${error.message}</option>`;
         document.getElementById('selectPrincipal').innerHTML = '<option value="">Error de conexión</option>';
     }
 });
@@ -209,6 +222,11 @@ async function guardarAsientoBD() {
     }
 
     const descripcion = document.getElementById('inputDescripcion').value || "Registro manual";
+    const idLibro = Number(document.getElementById('selectLibro').value);
+    if (!idLibro) {
+        alert("Seleccione un libro activo.");
+        return;
+    }
     
     // Filtramos las líneas que tienen un código de subcuenta válido para la base de datos
     const detallesParaBD = lineasAsiento
@@ -220,6 +238,8 @@ async function guardarAsientoBD() {
         }));
 
     const payload = {
+        idEmpresa,
+        idLibro,
         fecha: lineasAsiento[0].fecha,
         descripcion: descripcion,
         detalles: detallesParaBD

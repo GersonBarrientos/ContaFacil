@@ -1,24 +1,18 @@
 require('dotenv').config();
-const mysql = require('mysql2/promise'); // Conector MySQL
+const { Pool } = require('pg');
 
-const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
-
-async function getConnection() {
-    try {
-        const connection = await pool.getConnection();
-        return connection;
-    } catch (error) {
-        console.error("Error conectando a MySQL:", error);
-        throw error;
-    }
+if (!process.env.SUPABASE_DB_URL) {
+    throw new Error('Falta SUPABASE_DB_URL en el archivo .env');
 }
 
-module.exports = { pool, getConnection };
+const pool = new Pool({
+    connectionString: process.env.SUPABASE_DB_URL,
+    ssl: { rejectUnauthorized: false },
+    max: 10
+});
+
+pool.on('error', error => {
+    console.error('Error inesperado en la conexión PostgreSQL:', error);
+});
+
+module.exports = { pool };

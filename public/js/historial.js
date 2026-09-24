@@ -1,6 +1,24 @@
 document.addEventListener("DOMContentLoaded", async () => {
     try {
-        const respuesta = await fetch('/api/historial');
+        const idEmpresa = Number(localStorage.getItem('idEmpresa') || 1);
+        const filtro = document.getElementById('filtroLibro');
+        const librosResponse = await fetch(`/api/libros?idEmpresa=${idEmpresa}`);
+        const libros = await librosResponse.json();
+        if (!librosResponse.ok || !Array.isArray(libros)) {
+            throw new Error(libros.error || 'No se pudieron cargar los libros. Ejecuta la migración de base de datos.');
+        }
+        libros.forEach(libro => {
+            filtro.innerHTML += `<option value="${libro.id_libro}">${libro.nombre_libro}</option>`;
+        });
+        const idLibro = new URLSearchParams(window.location.search).get('idLibro') || '';
+        filtro.value = idLibro;
+        filtro.addEventListener('change', () => {
+            const query = filtro.value ? `?idLibro=${filtro.value}` : '';
+            window.location.href = `historial-diario.html${query}`;
+        });
+        const params = new URLSearchParams({ idEmpresa });
+        if (idLibro) params.set('idLibro', idLibro);
+        const respuesta = await fetch(`/api/historial?${params}`);
         const datos = await respuesta.json();
         
         const contenedor = document.getElementById('contenedorAsientos');
