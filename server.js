@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const { pool } = require('./db');
 
 const apiRoutes = require('./routes/index');
 
@@ -18,7 +19,13 @@ app.use('/api', apiRoutes);
 
 // INICIO DEL SERVIDOR
 const port = process.env.PORT || 3000;
-app.listen(port, () => {
+app.listen(port, async () => {
     console.log(`Servidor API corriendo en http://localhost:${port}`);
     console.log(`Vista Frontend disponible en http://localhost:${port}/index.html`);
+    try {
+        await pool.query('SELECT 1');
+        console.log('Conexión a Supabase PostgreSQL verificada.');
+    } catch (error) {
+        console.error(`No se pudo conectar a Supabase PostgreSQL: ${error.message}`);
+    }
 });
