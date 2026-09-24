@@ -59,6 +59,14 @@ const actualizarLibro = async (idEmpresa, idLibro, nombreLibro, descripcion, est
     return rowCount > 0;
 };
 
+const verificarLibroActivo = async (idEmpresa, idLibro) => {
+    const { rows } = await pool.query(`
+        SELECT 1 FROM public.libros_diarios 
+        WHERE id_empresa = $1 AND id_libro = $2 AND estado = 'ACTIVO'
+    `, [idEmpresa, idLibro]);
+    return rows.length > 0;
+};
+
 const eliminarLibro = async (idEmpresa, idLibro) => {
     const { rows } = await pool.query(
         'SELECT COUNT(*)::int AS cantidad FROM public.asientos WHERE id_libro = $1',
@@ -115,15 +123,24 @@ const obtenerMayorizacion = async (idEmpresa, idLibro, fechaInicio, fechaFin) =>
     const params = [idEmpresa, fechaInicio, fechaFin];
     const filtroLibro = idLibro ? `AND h.id_libro = $${params.push(idLibro)}` : '';
     const { rows } = await pool.query(`
-        SELECT h.codigo_cuenta AS codigo_cuenta, h.cuenta_principal AS cuenta,
-               COALESCE(SUM(h.debe), 0) AS total_debe,
-               COALESCE(SUM(h.haber), 0) AS total_haber,
-               COALESCE(SUM(h.debe - h.haber), 0) AS saldo
+        SELECT h.codigo_cuenta, h.cuenta_principal AS cuenta,
+               h.fecha, h.descripcion, h.id_asiento,
+               s.nombre_subcuenta AS subcuenta,
+               COALESCE(h.debe, 0) AS debe,
+               COALESCE(h.haber, 0) AS haber
         FROM public.vw_historial_asientos h
         JOIN public.libros_diarios l ON l.id_libro = h.id_libro
+        JOIN public.subcuentas s ON s.codigo_subcuenta = h.codigo_subcuenta
         WHERE l.id_empresa = $1 AND h.fecha BETWEEN $2::date AND $3::date ${filtroLibro}
-        GROUP BY h.codigo_cuenta, h.cuenta_principal
-        ORDER BY h.codigo_cuenta
+        ORDER BY h.codigo_cuenta, h.fecha, h.id_asiento
+    `, params);
+    return rows;
+};
+
+const obtenerBalanceComprobacion = async (idEmpresa, idLibro, fechaInicio, fechaFin) => {
+    const params = [idEmpresa, idLibro, fechaInicio || null, fechaFin];
+    const { rows } = await pool.query(`
+        SELECT * FROM balance_comprobacion($1, $2, $3, $4)
     `, params);
     return rows;
 };
@@ -131,5 +148,6 @@ const obtenerMayorizacion = async (idEmpresa, idLibro, fechaInicio, fechaFin) =>
 module.exports = {
     obtenerEmpresaActual, actualizarEmpresa, obtenerLibros, crearLibro,
     actualizarLibro, eliminarLibro, getCuentas, guardarAsiento,
-    obtenerHistorialAsientos, obtenerMayorizacion
+    obtenerHistorialAsientos, obtenerMayorizacion, obtenerBalanceComprobacion,
+    verificarLibroActivo
 };

@@ -2,8 +2,15 @@ const idEmpresa = Number(localStorage.getItem('idEmpresa') || 1);
 let libros = [];
 
 const mostrarMensaje = (texto, tipo = 'info') => {
-    document.getElementById('mensaje').innerHTML = `<div class="alert alert-${tipo}">${texto}</div>`;
+    document.getElementById('mensaje').innerHTML = `<div class="alert alert-${tipo}">${esc(texto)}</div>`;
 };
+
+function esc(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>'"]/g, match => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    })[match]);
+}
 
 async function cargar() {
     const empresa = await (await fetch(`/api/empresa?idEmpresa=${idEmpresa}`)).json();
@@ -11,8 +18,8 @@ async function cargar() {
     libros = await (await fetch(`/api/libros?idEmpresa=${idEmpresa}&incluirInactivos=true`)).json();
     document.getElementById('libros').innerHTML = libros.map(libro => `
         <tr>
-            <td>L${String(libro.id_libro).padStart(3, '0')}</td><td>${libro.nombre_libro}</td>
-            <td>${libro.descripcion || ''}</td><td><span class="badge text-bg-${libro.estado === 'ACTIVO' ? 'success' : 'secondary'}">${libro.estado}</span></td>
+            <td>L${String(libro.id_libro).padStart(3, '0')}</td><td>${esc(libro.nombre_libro)}</td>
+            <td>${esc(libro.descripcion || '')}</td><td><span class="badge text-bg-${libro.estado === 'ACTIVO' ? 'success' : 'secondary'}">${esc(libro.estado)}</span></td>
             <td>${libro.cantidad_asientos}</td>
             <td><button class="btn btn-sm btn-outline-primary" onclick="editar(${libro.id_libro})">Editar</button>
                 <button class="btn btn-sm btn-outline-danger" onclick="eliminar(${libro.id_libro})">Eliminar</button></td>
@@ -32,7 +39,8 @@ document.getElementById('nuevoLibro').onclick = async () => {
 };
 
 window.editar = async idLibro => {
-    const libro = libros.find(item => item.id_libro === idLibro);
+    const libro = libros.find(item => String(item.id_libro) === String(idLibro));
+    if (!libro) return mostrarMensaje('Libro no encontrado', 'danger');
     const nombreLibro = prompt('Nombre del libro:', libro.nombre_libro);
     if (!nombreLibro || !nombreLibro.trim()) return;
     const descripcion = prompt('Descripción:', libro.descripcion || '') || '';
@@ -51,7 +59,8 @@ window.eliminar = async idLibro => {
     if (!response.ok) {
         const error = await response.json();
         if (response.status === 409 && confirm(`${error.error}. ¿Desactivar el libro?`)) {
-            const libro = libros.find(item => item.id_libro === idLibro);
+            const libro = libros.find(item => String(item.id_libro) === String(idLibro));
+            if (!libro) return;
             await fetch(`/api/libros/${idLibro}`, {
                 method: 'PATCH', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ idEmpresa, nombreLibro: libro.nombre_libro, descripcion: libro.descripcion, estado: 'INACTIVO' })

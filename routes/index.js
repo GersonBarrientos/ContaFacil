@@ -5,7 +5,7 @@ const router = express.Router();
 
 const {
     obtenerEmpresa, actualizarEmpresa, obtenerLibros, crearLibro, actualizarLibro, eliminarLibro,
-    obtenerCuentas, crearAsiento, getHistorial, obtenerMayorizacion
+    obtenerCuentas, crearAsiento, getHistorial, obtenerMayorizacion, obtenerBalanceComprobacion
 } = require('../controllers/contabilidadController');
 
 router.get('/health', async (req, res) => {
@@ -25,6 +25,7 @@ router.patch('/libros/:idLibro', actualizarLibro);
 router.delete('/libros/:idLibro', eliminarLibro);
 router.get('/historial', getHistorial);
 router.get('/mayorizacion', obtenerMayorizacion);
+router.get('/balance-comprobacion', obtenerBalanceComprobacion);
 router.get('/cuentas', obtenerCuentas);
 router.post('/asientos', crearAsiento);
 

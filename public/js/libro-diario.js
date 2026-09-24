@@ -2,6 +2,13 @@ let lineasAsiento = [];
 let cuentasAgrupadas = {}; // Guardará el catálogo estructurado
 const idEmpresa = Number(localStorage.getItem('idEmpresa') || 1);
 
+function esc(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>'"]/g, match => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    })[match]);
+}
+
 // 1. Cargar el catálogo al iniciar la página
 document.addEventListener("DOMContentLoaded", async () => {
     try {
@@ -13,7 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const selectLibro = document.getElementById('selectLibro');
         selectLibro.innerHTML = '<option value="">-- Seleccione libro --</option>';
         libros.forEach(libro => {
-            selectLibro.innerHTML += `<option value="${libro.id_libro}">${libro.nombre_libro}</option>`;
+            selectLibro.innerHTML += `<option value="${esc(libro.id_libro)}">${esc(libro.nombre_libro)}</option>`;
         });
         const respuesta = await fetch('/api/cuentas'); 
         const cuentas = await respuesta.json();
@@ -33,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         for (const categoria of Object.keys(cuentasAgrupadas)) {
             const opt = document.createElement('option');
             opt.value = categoria;
-            opt.innerHTML = categoria;
+            opt.textContent = categoria;
             selectPrincipal.appendChild(opt);
         }
     } catch (error) {
@@ -71,7 +78,7 @@ function alCambiarPrincipal() {
         const opt = document.createElement('option');
         opt.value = sub.CodigoSubcuenta;
         opt.dataset.nombre = sub.NombreSubcuenta;
-        opt.innerHTML = `${sub.NombreSubcuenta} (${sub.CodigoSubcuenta})`;
+        opt.textContent = `${sub.NombreSubcuenta} (${sub.CodigoSubcuenta})`;
         selectSubcuenta.appendChild(opt);
     });
 }
@@ -103,19 +110,32 @@ function agregarLinea() {
         return;
     }
 
-    const debe = parseFloat(document.getElementById('inputDebe').value) || 0;
-    const haber = parseFloat(document.getElementById('inputHaber').value) || 0;
+    const debe = Number((parseFloat(document.getElementById('inputDebe').value) || 0).toFixed(2));
+    const haber = Number((parseFloat(document.getElementById('inputHaber').value) || 0).toFixed(2));
 
     if (!fecha) {
         alert("La fecha es obligatoria.");
+        return;
+    }
+    if (debe < 0 || haber < 0) {
+        alert("No se permiten montos negativos.");
         return;
     }
     if (debe === 0 && haber === 0) {
         alert("Debe ingresar un monto en el Debe o en el Haber.");
         return;
     }
+    if (debe > 0 && haber > 0) {
+        alert("Una misma línea no puede tener valores en el Debe y el Haber simultáneamente.");
+        return;
+    }
+    if (selectSubcuenta.value === "") {
+        alert("Por favor seleccione una Subcuenta. Es requerido para registrar en la base de datos.");
+        return;
+    }
 
     const categoriaPrincipal = selectPrincipal.value;
+    const grupoId = Date.now() + Math.random();
 
     // CASO 1: Si seleccionó una subcuenta, agregamos DOS líneas automáticamente: 
     // 1. La Cuenta Principal (en el Debe o Haber)
@@ -127,6 +147,7 @@ function agregarLinea() {
 
         // A. Insertar la Cuenta Principal visualmente
         lineasAsiento.push({
+            grupoId,
             fecha: fecha,
             codigo: "",
             concepto: categoriaPrincipal,
@@ -137,6 +158,7 @@ function agregarLinea() {
 
         // B. Insertar la Subcuenta abajo con su código para la BD
         lineasAsiento.push({
+            grupoId,
             fecha: fecha,
             codigo: codigoSubcuenta,
             concepto: nombreSubcuenta,
@@ -145,16 +167,6 @@ function agregarLinea() {
             esSubcuenta: true
         });
 
-    } else {
-        // CASO 2: Si dejó la subcuenta en "-- Ninguna --", solo agrega la Cuenta Principal
-        lineasAsiento.push({
-            fecha: fecha,
-            codigo: "",
-            concepto: categoriaPrincipal,
-            debe: debe,
-            haber: haber,
-            esSubcuenta: false
-        });
     }
 
     renderizarTabla();
@@ -184,7 +196,7 @@ function renderizarTabla() {
         const tdFecha = `<td class="fecha-col">${formatearFecha(linea.fecha)}</td>`;
 
         const claseCuenta = linea.esSubcuenta ? 'subcuenta' : 'cuenta-principal';
-        const textoCuenta = linea.esSubcuenta ? `↳ ${linea.concepto}` : linea.concepto;
+        const textoCuenta = linea.esSubcuenta ? `↳ ${esc(linea.concepto)}` : esc(linea.concepto);
 
         let parcialHTML = '', debeHTML = '', haberHTML = '';
         
@@ -194,8 +206,8 @@ function renderizarTabla() {
         } else {
             debeHTML = linea.debe > 0 ? linea.debe.toLocaleString('en-US', {minimumFractionDigits: 2}) : '';
             haberHTML = linea.haber > 0 ? linea.haber.toLocaleString('en-US', {minimumFractionDigits: 2}) : '';
-            sumDebe += linea.debe;
-            sumHaber += linea.haber;
+            sumDebe = Number((sumDebe + linea.debe).toFixed(2));
+            sumHaber = Number((sumHaber + linea.haber).toFixed(2));
         }
 
         tr.innerHTML = `
@@ -205,7 +217,7 @@ function renderizarTabla() {
             <td class="monto">${debeHTML}</td>
             <td class="monto">${haberHTML}</td>
             <td class="text-center">
-                <button class="btn btn-sm text-danger" onclick="eliminarLinea(${index})"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-sm text-danger" onclick="eliminarLinea(${linea.grupoId})"><i class="bi bi-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -228,6 +240,20 @@ async function guardarAsientoBD() {
         return;
     }
     
+    const btnGuardar = document.querySelector('button[onclick="guardarAsientoBD()"]');
+    if (btnGuardar) {
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+    }
+
+    const totalDebe = parseFloat(document.getElementById('totalDebe').innerText.replace(/,/g, ''));
+    const totalHaber = parseFloat(document.getElementById('totalHaber').innerText.replace(/,/g, ''));
+    if (Math.abs(totalDebe - totalHaber) >= 0.01) {
+        alert("El asiento no cuadra. El total Debe debe ser igual al total Haber.");
+        if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.innerHTML = '<i class="bi bi-save me-2"></i> Guardar Asiento'; }
+        return;
+    }
+    
     // Filtramos las líneas que tienen un código de subcuenta válido para la base de datos
     const detallesParaBD = lineasAsiento
         .filter(l => l.codigo !== '') // Solo enviamos las filas que tienen subcuenta vinculada
@@ -241,7 +267,7 @@ async function guardarAsientoBD() {
         idEmpresa,
         idLibro,
         fecha: lineasAsiento[0].fecha,
-        descripcion: descripcion,
+        descripcion: esc(descripcion),
         detalles: detallesParaBD
     };
 
@@ -264,14 +290,19 @@ async function guardarAsientoBD() {
     } catch (error) {
         console.error("Error de conexión:", error);
         alert("Error de conexión con el servidor Node.js");
+    } finally {
+        if (btnGuardar) {
+            btnGuardar.disabled = false;
+            btnGuardar.innerHTML = '<i class="bi bi-save me-2"></i> Guardar Asiento';
+        }
     }
 }
 
 
 
 // Función para eliminar una línea de la tabla temporal
-function eliminarLinea(index) {
-    lineasAsiento.splice(index, 1);
+function eliminarLinea(grupoId) {
+    lineasAsiento = lineasAsiento.filter(l => l.grupoId !== grupoId);
     renderizarTabla();
 }
 

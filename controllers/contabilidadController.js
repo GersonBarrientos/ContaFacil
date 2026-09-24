@@ -1,6 +1,9 @@
 const ContabilidadModel = require('../models/contabilidadModel');
 
-const idPositivo = value => Number.isInteger(Number(value)) && Number(value) > 0;
+const idPositivo = value => {
+    if (Array.isArray(value) || typeof value === 'object') return false;
+    return Number.isInteger(Number(value)) && Number(value) > 0;
+};
 
 const mensajeErrorSupabase = error => {
     if (error.code === '42P01') return 'La tabla requerida no existe en Supabase. Ejecuta la migración PostgreSQL.';
@@ -117,15 +120,29 @@ const crearAsiento = async (req, res) => {
     if (!idPositivo(idEmpresa) || !idPositivo(idLibro) || !fecha || !Array.isArray(detalles) || detalles.length === 0) {
         return res.status(400).json({ error: 'idEmpresa, idLibro, fecha y detalles son obligatorios' });
     }
+    const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regexFecha.test(fecha)) {
+        return res.status(400).json({ error: 'El formato de fecha debe ser YYYY-MM-DD' });
+    }
+
+    // Validar rigurosamente cada línea para evitar inyección o montos negativos
+    for (const d of detalles) {
+        if (!d.codigo || typeof d.codigo !== 'string' || typeof d.debe !== 'number' || typeof d.haber !== 'number' || d.debe < 0 || d.haber < 0 || (d.debe === 0 && d.haber === 0) || (d.debe > 0 && d.haber > 0)) {
+            return res.status(400).json({ error: 'Estructura de detalles inválida o montos negativos' });
+        }
+    }
+
     try {
-        const libros = await ContabilidadModel.obtenerLibros(Number(idEmpresa), true);
-        const libro = libros.find(item => item.id_libro === Number(idLibro) && item.estado === 'ACTIVO');
-        if (!libro) return res.status(404).json({ error: 'El libro no existe o está inactivo' });
+        const libroActivo = await ContabilidadModel.verificarLibroActivo(Number(idEmpresa), Number(idLibro));
+        if (!libroActivo) return res.status(404).json({ error: 'El libro no existe o está inactivo' });
         await ContabilidadModel.guardarAsiento(Number(idLibro), fecha, descripcion, detalles);
 
         res.json({ mensaje: "Asiento procesado y guardado con éxito" });
     } catch (error) {
         console.error("Error guardando asiento:", error);
+        if (error.code === 'P0001') {
+            return res.status(400).json({ error: error.message });
+        }
         res.status(500).json({ error: "Error interno al procesar el asiento contable" });
     }
 };
@@ -151,6 +168,10 @@ const obtenerMayorizacion = async (req, res) => {
     if (!idPositivo(idEmpresa) || (idLibro && !idPositivo(idLibro)) || !fechaInicio || !fechaFin || fechaInicio > fechaFin) {
         return res.status(400).json({ error: 'Empresa, fechas y rango válido son obligatorios' });
     }
+    const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regexFecha.test(fechaInicio) || !regexFecha.test(fechaFin)) {
+        return res.status(400).json({ error: 'El formato de las fechas debe ser YYYY-MM-DD' });
+    }
     try {
         res.json(await ContabilidadModel.obtenerMayorizacion(
             Number(idEmpresa), idLibro ? Number(idLibro) : null, fechaInicio, fechaFin
@@ -161,16 +182,47 @@ const obtenerMayorizacion = async (req, res) => {
     }
 };
 
+const obtenerBalanceComprobacion = async (req, res) => {
+    const { idEmpresa = 1, idLibro, fechaInicio, fechaFin } = req.query;
+    
+    if (!idPositivo(idEmpresa) || !idPositivo(idLibro) || !fechaFin) {
+        return res.status(400).json({ error: 'Empresa, libro y fecha de corte son obligatorios' });
+    }
+    
+    if (fechaInicio && fechaInicio > fechaFin) {
+        return res.status(400).json({ error: 'La fecha de inicio no puede ser posterior a la fecha de corte' });
+    }
+
+    const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regexFecha.test(fechaFin) || (fechaInicio && !regexFecha.test(fechaInicio))) {
+        return res.status(400).json({ error: 'El formato de fecha debe ser YYYY-MM-DD' });
+    }
+
+    try {
+        const balance = await ContabilidadModel.obtenerBalanceComprobacion(
+            Number(idEmpresa), Number(idLibro), fechaInicio, fechaFin
+        );
+        res.json(balance);
+    } catch (error) {
+        console.error('Error consultando balance de comprobación:', error);
+        if (error.code === 'P0001') {
+            return res.status(400).json({ error: error.message });
+        }
+        res.status(500).json({ error: 'Error al obtener el balance de comprobación' });
+    }
+};
+
 // Exportamos las tres funciones juntas al final del archivo
-module.exports = { 
+module.exports = {
     obtenerEmpresa,
     actualizarEmpresa,
     obtenerLibros,
     crearLibro,
     actualizarLibro,
     eliminarLibro,
-    obtenerCuentas, 
-    crearAsiento, 
+    obtenerCuentas,
+    crearAsiento,
     getHistorial,
-    obtenerMayorizacion
+    obtenerMayorizacion,
+    obtenerBalanceComprobacion
 };
