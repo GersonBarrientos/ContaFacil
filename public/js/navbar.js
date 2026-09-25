@@ -7,7 +7,8 @@ const enlaces = [
     ['libro-diario.html', 'journal-plus', 'Nuevo asiento'],
     ['historial-diario.html', 'journal-text', 'Historial'],
     ['mayorizacion.html', 'bar-chart-line', 'Mayorización'],
-    ['balance-comprobacion.html', 'clipboard-check', 'Balance de comprobación']
+    ['balance-comprobacion.html', 'clipboard-check', 'Balance de comprobación'],
+    ['kardex.html', 'box-seam', 'Tarjeta Kardex']
 ];
 
 const navbar = `
