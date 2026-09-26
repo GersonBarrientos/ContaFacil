@@ -211,7 +211,23 @@ const obtenerBalanceComprobacion = async (req, res) => {
         res.status(500).json({ error: 'Error al obtener el balance de comprobación' });
     }
 };
+//Estado de Resultado
+const getEstadoResultados = async (req, res) => {
+    try {
+        const { idLibro, fechaInicio, fechaFin } = req.query;
+        
+        // Verificamos que el frontend haya enviado todos los filtros
+        if (!idLibro || !fechaInicio || !fechaFin) {
+            return res.status(400).json({ error: "Faltan parámetros de filtrado" });
+        }
 
+        const resultados = await ContabilidadModel.obtenerEstadoResultados(idLibro, fechaInicio, fechaFin);
+        res.json(resultados);
+    } catch (error) {
+        console.error("Error al obtener el Estado de Resultados:", error);
+        res.status(500).send("Error interno del servidor");
+    }
+};
 // Exportamos las tres funciones juntas al final del archivo
 module.exports = {
     obtenerEmpresa,
@@ -224,5 +240,7 @@ module.exports = {
     crearAsiento,
     getHistorial,
     obtenerMayorizacion,
-    obtenerBalanceComprobacion
+    obtenerBalanceComprobacion,
+    getEstadoResultados
+   
 };
