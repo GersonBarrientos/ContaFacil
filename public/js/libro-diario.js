@@ -100,84 +100,98 @@ function alCambiarSubcuenta() {
 }
 
 // 4. Función para agregar datos a la tabla (Botón "+")
+// 4. Función para agregar datos a la tabla (Botón "+") con cálculo de IVA
 function agregarLinea() {
     const fecha = document.getElementById('inputFecha').value;
     const selectPrincipal = document.getElementById('selectPrincipal');
     const selectSubcuenta = document.getElementById('selectSubcuenta');
+    const tipoIva = document.getElementById('tipoIva').value;
     
     if (selectPrincipal.value === "") {
         alert("Por favor seleccione una Cuenta Principal.");
         return;
     }
 
-    const debe = Number((parseFloat(document.getElementById('inputDebe').value) || 0).toFixed(2));
-    const haber = Number((parseFloat(document.getElementById('inputHaber').value) || 0).toFixed(2));
+    const debeRaw = parseFloat(document.getElementById('inputDebe').value) || 0;
+    const haberRaw = parseFloat(document.getElementById('inputHaber').value) || 0;
 
-    if (!fecha) {
-        alert("La fecha es obligatoria.");
-        return;
-    }
-    if (debe < 0 || haber < 0) {
-        alert("No se permiten montos negativos.");
-        return;
-    }
-    if (debe === 0 && haber === 0) {
-        alert("Debe ingresar un monto en el Debe o en el Haber.");
-        return;
-    }
-    if (debe > 0 && haber > 0) {
-        alert("Una misma línea no puede tener valores en el Debe y el Haber simultáneamente.");
-        return;
-    }
-    if (selectSubcuenta.value === "") {
-        alert("Por favor seleccione una Subcuenta. Es requerido para registrar en la base de datos.");
-        return;
-    }
+    if (!fecha) { alert("La fecha es obligatoria."); return; }
+    if (debeRaw < 0 || haberRaw < 0) { alert("No se permiten montos negativos."); return; }
+    if (debeRaw === 0 && haberRaw === 0) { alert("Debe ingresar un monto en el Debe o en el Haber."); return; }
+    if (debeRaw > 0 && haberRaw > 0) { alert("Una misma línea no puede tener valores en el Debe y el Haber."); return; }
+    if (selectSubcuenta.value === "") { alert("Por favor seleccione una Subcuenta."); return; }
 
     const categoriaPrincipal = selectPrincipal.value;
-    const grupoId = Date.now() + Math.random();
+    const opcionSub = selectSubcuenta.options[selectSubcuenta.selectedIndex];
+    const nombreSubcuenta = opcionSub.dataset.nombre;
+    const codigoSubcuenta = opcionSub.value;
 
-    // CASO 1: Si seleccionó una subcuenta, agregamos DOS líneas automáticamente: 
-    // 1. La Cuenta Principal (en el Debe o Haber)
-    // 2. La Subcuenta (con sangría y en la columna Parcial)
-    if (selectSubcuenta.value !== "") {
-        const opcionSub = selectSubcuenta.options[selectSubcuenta.selectedIndex];
-        const nombreSubcuenta = opcionSub.dataset.nombre;
-        const codigoSubcuenta = opcionSub.value;
+    const isDebe = debeRaw > 0;
+    const montoIngresado = isDebe ? debeRaw : haberRaw;
 
-        // A. Insertar la Cuenta Principal visualmente
-        lineasAsiento.push({
-            grupoId,
-            fecha: fecha,
-            codigo: "",
-            concepto: categoriaPrincipal,
-            debe: debe,
-            haber: haber,
-            esSubcuenta: false
-        });
+    // Lógica matemática del IVA
+    let montoBase = montoIngresado;
+    let montoIva = 0;
 
-        // B. Insertar la Subcuenta abajo con su código para la BD
-        lineasAsiento.push({
-            grupoId,
-            fecha: fecha,
-            codigo: codigoSubcuenta,
-            concepto: nombreSubcuenta,
-            debe: debe,
-            haber: haber,
-            esSubcuenta: true
-        });
+    if (tipoIva === 'mas_iva') {
+        montoBase = montoIngresado;
+        montoIva = montoBase * 0.13;
+    } else if (tipoIva === 'incluido') {
+        montoBase = montoIngresado / 1.13;
+        montoIva = montoIngresado - montoBase;
+    }
 
+    // Redondear contablemente a 2 decimales
+    montoBase = Number(montoBase.toFixed(2));
+    montoIva = Number(montoIva.toFixed(2));
+
+    const grupoIdBase = Date.now() + Math.random();
+
+    // A. Insertar las líneas de la Cuenta Base (Compra, Venta, Gasto, etc.)
+    lineasAsiento.push({
+        grupoId: grupoIdBase, fecha: fecha, codigo: "", concepto: categoriaPrincipal,
+        debe: isDebe ? montoBase : 0, haber: isDebe ? 0 : montoBase, esSubcuenta: false
+    });
+    lineasAsiento.push({
+        grupoId: grupoIdBase, fecha: fecha, codigo: codigoSubcuenta, concepto: nombreSubcuenta,
+        debe: isDebe ? montoBase : 0, haber: isDebe ? 0 : montoBase, esSubcuenta: true
+    });
+
+    // B. Insertar automáticamente las líneas del IVA si aplica
+    if (montoIva > 0) {
+        // Si el monto está en el Debe (ej. Compra), usa Crédito. Si está en el Haber (ej. Venta), usa Débito.
+        const nombreCuentaIva = isDebe ? 'IVA - CRÉDITO FISCAL' : 'IVA - DÉBITO FISCAL';
+        
+        // Busca en tu catálogo la subcuenta de ese IVA
+        const subcuentasIva = cuentasAgrupadas[nombreCuentaIva];
+        
+        if (!subcuentasIva || subcuentasIva.length === 0) {
+            alert(`No se detectó la cuenta '${nombreCuentaIva}' en tu catálogo. El IVA no se registró.`);
+        } else {
+            const subIva = subcuentasIva[0]; // Extrae la primera subcuenta (ej. "IVA 13%")
+            const grupoIdIva = Date.now() + Math.random();
+
+            lineasAsiento.push({
+                grupoId: grupoIdIva, fecha: fecha, codigo: "", concepto: nombreCuentaIva,
+                debe: isDebe ? montoIva : 0, haber: isDebe ? 0 : montoIva, esSubcuenta: false
+            });
+            lineasAsiento.push({
+                grupoId: grupoIdIva, fecha: fecha, codigo: subIva.CodigoSubcuenta, concepto: subIva.NombreSubcuenta,
+                debe: isDebe ? montoIva : 0, haber: isDebe ? 0 : montoIva, esSubcuenta: true
+            });
+        }
     }
 
     renderizarTabla();
     
-    // Limpiar campos para la siguiente línea
+    // Limpiar campos para la siguiente línea y reiniciar el selector de IVA a "Sin IVA"
     document.getElementById('selectPrincipal').selectedIndex = 0;
     document.getElementById('selectSubcuenta').innerHTML = '<option value="">-- Seleccione primero una cuenta principal --</option>';
     document.getElementById('selectSubcuenta').disabled = true;
     document.getElementById('inputCodigo').value = '';
     document.getElementById('inputDebe').value = '0.00';
     document.getElementById('inputHaber').value = '0.00';
+    document.getElementById('tipoIva').value = 'ninguno';
     document.getElementById('checkSubcuenta').checked = false;
 }
 

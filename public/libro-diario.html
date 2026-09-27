@@ -151,10 +151,16 @@
                     <input type="text" id="inputCodigo" class="form-control form-control-sm bg-white shadow-sm" readonly placeholder="Auto">
                 </div>
             </div>
-            
-            <!-- Fila 2: Montos y Acción -->
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
+         
+            <!-- Fila 2: Montos, IVA y Acción -->
+            <div class="row g-3 align-items-end mt-1">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-dark"><i class="bi bi-calculator"></i> Cálculo de IVA</label>
+                    <select id="tipoIva" class="form-select form-select-sm shadow-sm border-secondary">
+                        <option value="ninguno">Sin IVA (Normal)</option>
+                        <option value="mas_iva">+ IVA (Agrega 13%)</option>
+                        <option value="incluido">IVA Incluido (Extrae 13%)</option>
+                    </select>
                     <!-- Checkbox oculto necesario para tu lógica JS -->
                     <input class="form-check-input d-none" type="checkbox" id="checkSubcuenta">
                 </div>
@@ -166,7 +172,7 @@
                     <label class="form-label small fw-bold text-success">Haber ($)</label>
                     <input type="number" id="inputHaber" class="form-control form-control-sm border-success shadow-sm" step="0.01" min="0" value="0.00">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <button onclick="agregarLinea()" class="btn btn-primary btn-sm w-100 shadow-sm fw-bold">
                         <i class="bi bi-plus-lg"></i> Agregar Línea
                     </button>
