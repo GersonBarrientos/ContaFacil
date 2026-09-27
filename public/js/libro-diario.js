@@ -1,5 +1,6 @@
 let lineasAsiento = [];
-let cuentasAgrupadas = {}; // Guardará el catálogo estructurado
+let cuentasAgrupadas = {}; 
+let librosGuardados = [];
 const idEmpresa = Number(localStorage.getItem('idEmpresa') || 1);
 
 function esc(str) {
@@ -9,49 +10,161 @@ function esc(str) {
     })[match]);
 }
 
-// 1. Cargar el catálogo al iniciar la página
+// 1. Inicialización
 document.addEventListener("DOMContentLoaded", async () => {
     try {
-        const librosResponse = await fetch(`/api/libros?idEmpresa=${idEmpresa}`);
-        const libros = await librosResponse.json();
-        if (!librosResponse.ok || !Array.isArray(libros)) {
-            throw new Error(libros.error || 'No se pudieron cargar los libros. Verifica la migración y la conexión a Supabase.');
-        }
-        const selectLibro = document.getElementById('selectLibro');
-        selectLibro.innerHTML = '<option value="">-- Seleccione libro --</option>';
-        libros.forEach(libro => {
-            selectLibro.innerHTML += `<option value="${esc(libro.id_libro)}">${esc(libro.nombre_libro)}</option>`;
-        });
-        const respuesta = await fetch('/api/cuentas'); 
-        const cuentas = await respuesta.json();
+        // Cargar Nombre Empresa en Modal Libros
+        const empresa = await (await fetch(`/api/empresa?idEmpresa=${idEmpresa}`)).json();
+        document.getElementById('empresaActualTexto').textContent = `Empresa: ${empresa.nombre_comercial || empresa.nombre_legal}`;
+
+        await cargarLibros();
+        await cargarCatalogo();
         
-        // Agrupar las cuentas por su Categoría
-        cuentas.forEach(cuenta => {
-            if (!cuentasAgrupadas[cuenta.Categoria]) {
-                cuentasAgrupadas[cuenta.Categoria] = [];
+        // Listener para cambio de libro
+        const filtroLibro = document.getElementById('filtroLibro');
+        filtroLibro.addEventListener('change', () => {
+            const btnNuevo = document.getElementById('btnAbrirNuevoAsiento');
+            if(filtroLibro.value) {
+                btnNuevo.disabled = false;
+                cargarHistorial(filtroLibro.value);
+            } else {
+                btnNuevo.disabled = true;
+                document.getElementById('contenedorAsientos').innerHTML = '<div class="alert alert-info text-center mt-5">Seleccione un libro para ver su historial.</div>';
             }
-            cuentasAgrupadas[cuenta.Categoria].push(cuenta);
         });
 
-        const selectPrincipal = document.getElementById('selectPrincipal');
-        selectPrincipal.innerHTML = '<option value="">-- Seleccione Cuenta Principal --</option>';
-        
-        // Llenar el primer menú solo con los nombres de las cuentas principales
-        for (const categoria of Object.keys(cuentasAgrupadas)) {
-            const opt = document.createElement('option');
-            opt.value = categoria;
-            opt.textContent = categoria;
-            selectPrincipal.appendChild(opt);
-        }
     } catch (error) {
-        console.error("Error cargando el catálogo:", error);
-        const selectLibro = document.getElementById('selectLibro');
-        if (selectLibro) selectLibro.innerHTML = `<option value="">${error.message}</option>`;
-        document.getElementById('selectPrincipal').innerHTML = '<option value="">Error de conexión</option>';
+        console.error("Error inicializando:", error);
     }
 });
 
-// 2. Se ejecuta al elegir una Cuenta Principal
+// --- GESTIÓN DE LIBROS ---
+async function cargarLibros() {
+    try {
+        const librosResponse = await fetch(`/api/libros?idEmpresa=${idEmpresa}&incluirInactivos=true`);
+        librosGuardados = await librosResponse.json();
+        if (!librosResponse.ok || !Array.isArray(librosGuardados)) throw new Error('Error al cargar libros');
+
+        // Llenar selector principal
+        const selectFiltro = document.getElementById('filtroLibro');
+        const valorActual = selectFiltro.value; // Mantener selección
+        selectFiltro.innerHTML = '<option value="">-- Seleccione un Libro Diario --</option>';
+        
+        // Llenar tabla en Modal
+        const tbodyLibros = document.getElementById('tablaLibrosBody');
+        tbodyLibros.innerHTML = '';
+
+        librosGuardados.forEach(libro => {
+            // Solo mostrar activos en el selector principal
+            if (libro.estado === 'ACTIVO') {
+                selectFiltro.innerHTML += `<option value="${esc(libro.id_libro)}">${esc(libro.nombre_libro)}</option>`;
+            }
+
+            // Mostrar todos en la tabla de gestión
+            tbodyLibros.innerHTML += `
+                <tr>
+                    <td><span class="badge bg-secondary">L${String(libro.id_libro).padStart(3, '0')}</span></td>
+                    <td class="fw-bold">${esc(libro.nombre_libro)}</td>
+                    <td class="text-muted small">${esc(libro.descripcion || '')}</td>
+                    <td><span class="badge bg-${libro.estado === 'ACTIVO' ? 'success' : 'dark'}">${esc(libro.estado)}</span></td>
+                    <td class="text-center"><span class="badge rounded-pill bg-primary">${libro.cantidad_asientos}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary shadow-sm" onclick="editarLibro(${libro.id_libro})"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger shadow-sm" onclick="eliminarLibro(${libro.id_libro})"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>`;
+        });
+
+        if (valorActual && librosGuardados.find(l => l.id_libro == valorActual && l.estado === 'ACTIVO')) {
+            selectFiltro.value = valorActual;
+            cargarHistorial(valorActual);
+        } else if(valorActual === "") {
+            document.getElementById('contenedorAsientos').innerHTML = '<div class="alert alert-info text-center mt-5 shadow-sm border-0"><i class="bi bi-journal-text d-block fs-1 mb-2 text-muted"></i>Seleccione un libro para ver su historial.</div>';
+        }
+
+    } catch (error) {
+        console.error(error);
+        document.getElementById('mensajeLibros').innerHTML = `<div class="alert alert-danger py-2 small">Error al cargar libros.</div>`;
+    }
+}
+
+document.getElementById('btnNuevoLibro').onclick = async () => {
+    const nombreLibro = prompt('Nombre del libro:');
+    if (!nombreLibro || !nombreLibro.trim()) return;
+    const descripcion = prompt('Descripción (opcional):') || '';
+    const response = await fetch('/api/libros', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ idEmpresa, nombreLibro, descripcion, estado: 'ACTIVO' })
+    });
+    if (!response.ok) {
+        const err = await response.json();
+        document.getElementById('mensajeLibros').innerHTML = `<div class="alert alert-danger py-2 small">${err.error}</div>`;
+        return;
+    }
+    await cargarLibros();
+};
+
+window.editarLibro = async idLibro => {
+    const libro = librosGuardados.find(item => String(item.id_libro) === String(idLibro));
+    if (!libro) return;
+    const nombreLibro = prompt('Nombre del libro:', libro.nombre_libro);
+    if (!nombreLibro || !nombreLibro.trim()) return;
+    const descripcion = prompt('Descripción:', libro.descripcion || '') || '';
+    const estado = confirm('¿Desea que el libro quede activo?') ? 'ACTIVO' : 'INACTIVO';
+    const response = await fetch(`/api/libros/${idLibro}`, {
+        method: 'PATCH', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ idEmpresa, nombreLibro, descripcion, estado })
+    });
+    if (!response.ok) {
+        const err = await response.json();
+        document.getElementById('mensajeLibros').innerHTML = `<div class="alert alert-danger py-2 small">${err.error}</div>`;
+        return;
+    }
+    await cargarLibros();
+};
+
+window.eliminarLibro = async idLibro => {
+    if (!confirm('Solo se eliminará físicamente si no tiene asientos. ¿Continuar?')) return;
+    const response = await fetch(`/api/libros/${idLibro}?idEmpresa=${idEmpresa}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const error = await response.json();
+        if (response.status === 409 && confirm(`${error.error}. ¿Desactivar el libro?`)) {
+            const libro = librosGuardados.find(item => String(item.id_libro) === String(idLibro));
+            if (!libro) return;
+            await fetch(`/api/libros/${idLibro}`, {
+                method: 'PATCH', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ idEmpresa, nombreLibro: libro.nombre_libro, descripcion: libro.descripcion, estado: 'INACTIVO' })
+            });
+            return cargarLibros();
+        }
+        document.getElementById('mensajeLibros').innerHTML = `<div class="alert alert-danger py-2 small">${error.error}</div>`;
+        return;
+    }
+    await cargarLibros();
+};
+
+// --- CARGA DE CATÁLOGO ---
+async function cargarCatalogo() {
+    const respuesta = await fetch('/api/cuentas'); 
+    const cuentas = await respuesta.json();
+    
+    cuentas.forEach(cuenta => {
+        if (!cuentasAgrupadas[cuenta.Categoria]) { cuentasAgrupadas[cuenta.Categoria] = []; }
+        cuentasAgrupadas[cuenta.Categoria].push(cuenta);
+    });
+
+    const selectPrincipal = document.getElementById('selectPrincipal');
+    selectPrincipal.innerHTML = '<option value="">-- Seleccione Cuenta Principal --</option>';
+    
+    for (const categoria of Object.keys(cuentasAgrupadas)) {
+        const opt = document.createElement('option');
+        opt.value = categoria;
+        opt.textContent = categoria;
+        selectPrincipal.appendChild(opt);
+    }
+}
+
+// --- LÓGICA DE NUEVO ASIENTO ---
 function alCambiarPrincipal() {
     const selectPrincipal = document.getElementById('selectPrincipal');
     const selectSubcuenta = document.getElementById('selectSubcuenta');
@@ -59,8 +172,6 @@ function alCambiarPrincipal() {
     const checkSubcuenta = document.getElementById('checkSubcuenta');
     
     const categoria = selectPrincipal.value;
-    
-    // Limpiamos el código y el check
     inputCodigo.value = "";
     checkSubcuenta.checked = false;
 
@@ -70,7 +181,6 @@ function alCambiarPrincipal() {
         return;
     }
 
-    // Habilitar y llenar el menú de subcuentas vinculado a esta principal
     selectSubcuenta.disabled = false;
     selectSubcuenta.innerHTML = '<option value="">-- Ninguna (Registro de Mayor) --</option>';
     
@@ -83,7 +193,6 @@ function alCambiarPrincipal() {
     });
 }
 
-// 3. Se ejecuta al elegir una Subcuenta
 function alCambiarSubcuenta() {
     const selectSubcuenta = document.getElementById('selectSubcuenta');
     const inputCodigo = document.getElementById('inputCodigo');
@@ -93,24 +202,18 @@ function alCambiarSubcuenta() {
         inputCodigo.value = "";
         checkSubcuenta.checked = false;
     } else {
-        // Autocompletar el código de la subcuenta en el input
         inputCodigo.value = selectSubcuenta.value;
         checkSubcuenta.checked = true;
     }
 }
 
-
-// 4. Función para agregar datos a la tabla (Botón "+") con cálculo de IVA
 function agregarLinea() {
     const fecha = document.getElementById('inputFecha').value;
     const selectPrincipal = document.getElementById('selectPrincipal');
     const selectSubcuenta = document.getElementById('selectSubcuenta');
     const tipoIva = document.getElementById('tipoIva').value;
     
-    if (selectPrincipal.value === "") {
-        alert("Por favor seleccione una Cuenta Principal.");
-        return;
-    }
+    if (selectPrincipal.value === "") { alert("Por favor seleccione una Cuenta Principal."); return; }
 
     const debeRaw = parseFloat(document.getElementById('inputDebe').value) || 0;
     const haberRaw = parseFloat(document.getElementById('inputHaber').value) || 0;
@@ -129,7 +232,6 @@ function agregarLinea() {
     const isDebe = debeRaw > 0;
     const montoIngresado = isDebe ? debeRaw : haberRaw;
 
-    // Lógica matemática del IVA
     let montoBase = montoIngresado;
     let montoIva = 0;
 
@@ -141,13 +243,11 @@ function agregarLinea() {
         montoIva = montoIngresado - montoBase;
     }
 
-    // Redondear contablemente a 2 decimales
     montoBase = Number(montoBase.toFixed(2));
     montoIva = Number(montoIva.toFixed(2));
 
     const grupoIdBase = Date.now() + Math.random();
 
-    // A. Insertar las líneas de la Cuenta Base (Compra, Venta, Gasto, etc.)
     lineasAsiento.push({
         grupoId: grupoIdBase, fecha: fecha, codigo: "", concepto: categoriaPrincipal,
         debe: isDebe ? montoBase : 0, haber: isDebe ? 0 : montoBase, esSubcuenta: false
@@ -157,29 +257,22 @@ function agregarLinea() {
         debe: isDebe ? montoBase : 0, haber: isDebe ? 0 : montoBase, esSubcuenta: true
     });
 
-    // B. Insertar automáticamente las líneas del IVA si aplica
     if (montoIva > 0) {
-
-// Lógica inteligente para determinar la cuenta de IVA correcta
         let nombreCuentaIva = isDebe ? 'IVA - CRÉDITO FISCAL' : 'IVA - DÉBITO FISCAL';
         const nombreCuentaNormalizado = categoriaPrincipal.toLowerCase();
         
-        // Si la cuenta tiene la palabra "compra" (ej. Compras, Devoluciones sobre compras), fuerza el Crédito Fiscal
         if (nombreCuentaNormalizado.includes('compra')) {
             nombreCuentaIva = 'IVA - CRÉDITO FISCAL';
-        } 
-        // Si la cuenta tiene la palabra "venta" (ej. Ventas, Devoluciones sobre ventas), fuerza el Débito Fiscal
-        else if (nombreCuentaNormalizado.includes('venta')) {
+        } else if (nombreCuentaNormalizado.includes('venta')) {
             nombreCuentaIva = 'IVA - DÉBITO FISCAL';
         }
         
-        // Busca en tu catálogo la subcuenta de ese IVA
         const subcuentasIva = cuentasAgrupadas[nombreCuentaIva];
         
         if (!subcuentasIva || subcuentasIva.length === 0) {
             alert(`No se detectó la cuenta '${nombreCuentaIva}' en tu catálogo. El IVA no se registró.`);
         } else {
-            const subIva = subcuentasIva[0]; // Extrae la primera subcuenta (ej. "IVA 13%")
+            const subIva = subcuentasIva[0];
             const grupoIdIva = Date.now() + Math.random();
 
             lineasAsiento.push({
@@ -193,9 +286,8 @@ function agregarLinea() {
         }
     }
 
-    renderizarTabla();
+    renderizarTablaAsiento();
     
-    // Limpiar campos para la siguiente línea y reiniciar el selector de IVA a "Sin IVA"
     document.getElementById('selectPrincipal').selectedIndex = 0;
     document.getElementById('selectSubcuenta').innerHTML = '<option value="">-- Seleccione primero una cuenta principal --</option>';
     document.getElementById('selectSubcuenta').disabled = true;
@@ -206,20 +298,14 @@ function agregarLinea() {
     document.getElementById('checkSubcuenta').checked = false;
 }
 
-// 5. Dibujar la tabla HTML con fechas independientes por línea
-function renderizarTabla() {
+function renderizarTablaAsiento() {
     const tbody = document.getElementById('cuerpoTabla');
     tbody.innerHTML = ''; 
+    let sumDebe = 0, sumHaber = 0;
 
-    let sumDebe = 0;
-    let sumHaber = 0;
-
-    lineasAsiento.forEach((linea, index) => {
+    lineasAsiento.forEach((linea) => {
         const tr = document.createElement('tr');
-        
-        // Cada fila muestra su propia fecha formateada individualmente
         const tdFecha = `<td class="fecha-col">${formatearFecha(linea.fecha)}</td>`;
-
         const claseCuenta = linea.esSubcuenta ? 'subcuenta' : 'cuenta-principal';
         const textoCuenta = linea.esSubcuenta ? `↳ ${esc(linea.concepto)}` : esc(linea.concepto);
 
@@ -243,98 +329,203 @@ function renderizarTabla() {
             <td class="monto">${haberHTML}</td>
             <td class="text-center">
                 <button class="btn btn-sm text-danger" onclick="eliminarLinea(${linea.grupoId})"><i class="bi bi-trash"></i></button>
-            </td>
-        `;
+            </td>`;
         tbody.appendChild(tr);
     });
 
     document.getElementById('totalDebe').innerText = sumDebe.toLocaleString('en-US', {minimumFractionDigits: 2});
     document.getElementById('totalHaber').innerText = sumHaber.toLocaleString('en-US', {minimumFractionDigits: 2});
 }
-// 6. Enviar el JSON a tu Backend Node.js
-async function guardarAsientoBD() {
-    if (lineasAsiento.length === 0) {
-        alert("No hay líneas para guardar.");
-        return;
-    }
 
-    const descripcion = document.getElementById('inputDescripcion').value || "Registro manual";
-    const idLibro = Number(document.getElementById('selectLibro').value);
-    if (!idLibro) {
-        alert("Seleccione un libro activo.");
-        return;
-    }
-    
-    const btnGuardar = document.querySelector('button[onclick="guardarAsientoBD()"]');
-    if (btnGuardar) {
-        btnGuardar.disabled = true;
-        btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
-    }
-
-    const totalDebe = parseFloat(document.getElementById('totalDebe').innerText.replace(/,/g, ''));
-    const totalHaber = parseFloat(document.getElementById('totalHaber').innerText.replace(/,/g, ''));
-    if (Math.abs(totalDebe - totalHaber) >= 0.01) {
-        alert("El asiento no cuadra. El total Debe debe ser igual al total Haber.");
-        if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.innerHTML = '<i class="bi bi-save me-2"></i> Guardar Asiento'; }
-        return;
-    }
-    
-    // Filtramos las líneas que tienen un código de subcuenta válido para la base de datos
-    const detallesParaBD = lineasAsiento
-        .filter(l => l.codigo !== '') // Solo enviamos las filas que tienen subcuenta vinculada
-        .map(l => ({
-            codigo: l.codigo,         // Aquí enviamos el código (ej. "110101") que exige la base de datos
-            debe: l.debe,
-            haber: l.haber
-        }));
-
-    const payload = {
-        idEmpresa,
-        idLibro,
-        fecha: lineasAsiento[0].fecha,
-        descripcion: esc(descripcion),
-        detalles: detallesParaBD
-    };
-
-    try {
-        const response = await fetch('/api/asientos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (response.ok) {
-            alert("Asiento guardado correctamente en la base de datos.");
-            lineasAsiento = [];
-            renderizarTabla();
-            document.getElementById('inputDescripcion').value = '';
-        } else {
-            const err = await response.json();
-            alert("Error del servidor: " + (err.error || "No se pudo guardar"));
-        }
-    } catch (error) {
-        console.error("Error de conexión:", error);
-        alert("Error de conexión con el servidor Node.js");
-    } finally {
-        if (btnGuardar) {
-            btnGuardar.disabled = false;
-            btnGuardar.innerHTML = '<i class="bi bi-save me-2"></i> Guardar Asiento';
-        }
-    }
-}
-
-
-
-// Función para eliminar una línea de la tabla temporal
 function eliminarLinea(grupoId) {
     lineasAsiento = lineasAsiento.filter(l => l.grupoId !== grupoId);
-    renderizarTabla();
+    renderizarTablaAsiento();
 }
 
-// Función para formatear la fecha de formato YYYY-MM-DD a DD/MM
 function formatearFecha(fechaISO) {
     if (!fechaISO) return '';
     const partes = fechaISO.split('-');
     if (partes.length < 3) return fechaISO;
     return `${partes[2]}/${partes[1]}`;
+}
+
+async function guardarAsientoBD() {
+    if (lineasAsiento.length === 0) { alert("No hay líneas para guardar."); return; }
+
+    const descripcion = document.getElementById('inputDescripcion').value || "Registro manual";
+    const idLibro = Number(document.getElementById('filtroLibro').value);
+    
+    if (!idLibro) { alert("Seleccione un libro activo de la lista principal primero."); return; }
+    
+    const totalDebe = parseFloat(document.getElementById('totalDebe').innerText.replace(/,/g, ''));
+    const totalHaber = parseFloat(document.getElementById('totalHaber').innerText.replace(/,/g, ''));
+    if (Math.abs(totalDebe - totalHaber) >= 0.01) {
+        alert("El asiento no cuadra. El total Debe debe ser igual al total Haber.");
+        return;
+    }
+    
+    const detallesParaBD = lineasAsiento
+        .filter(l => l.codigo !== '') 
+        .map(l => ({ codigo: l.codigo, debe: l.debe, haber: l.haber }));
+
+    const payload = { idEmpresa, idLibro, fecha: lineasAsiento[0].fecha, descripcion: esc(descripcion), detalles: detallesParaBD };
+
+    try {
+        const response = await fetch('/api/asientos', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            lineasAsiento = [];
+            renderizarTablaAsiento();
+            document.getElementById('inputDescripcion').value = '';
+            
+            // Cerrar modal
+            const modalEl = document.getElementById('modalNuevoAsiento');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+            
+            // Recargar historial
+            cargarHistorial(idLibro);
+        } else {
+            const err = await response.json();
+            alert("Error del servidor: " + (err.error || "No se pudo guardar"));
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Error de conexión");
+    }
+}
+
+// --- HISTORIAL ---
+async function cargarHistorial(idLibro) {
+    const contenedor = document.getElementById('contenedorAsientos');
+    contenedor.innerHTML = '<div class="text-center mt-5"><span class="spinner-border text-primary"></span><p>Cargando historial...</p></div>';
+
+    try {
+        const respuesta = await fetch(`/api/historial?idEmpresa=${idEmpresa}&idLibro=${idLibro}`);
+        const datos = await respuesta.json();
+        
+        contenedor.innerHTML = '';
+
+        if (datos.length === 0) {
+            contenedor.innerHTML = `<div class="alert alert-light text-center mt-4 border border-secondary border-opacity-25 shadow-sm"><i class="bi bi-info-circle text-primary fs-3 d-block mb-2"></i>No hay asientos registrados en este libro.</div>`;
+            return;
+        }
+
+        const asientosAgrupados = {};
+        datos.forEach(row => {
+            if (!asientosAgrupados[row.IdAsiento]) {
+                asientosAgrupados[row.IdAsiento] = { id: row.IdAsiento, fecha: row.Fecha, descripcion: row.Descripcion, detalles: [] };
+            }
+            asientosAgrupados[row.IdAsiento].detalles.push(row);
+        });
+
+        for (const asientoId of Object.keys(asientosAgrupados).reverse()) {
+            const asiento = asientosAgrupados[asientoId];
+            const fechaFormateada = asiento.fecha ? asiento.fecha.split('T')[0].split('-').reverse().join('/') : '';
+            let sumDebe = 0, sumHaber = 0, filasHTML = '';
+
+            asiento.detalles.forEach(det => {
+                const debeVal = Number(det.Debe) || 0;
+                const haberVal = Number(det.Haber) || 0;
+                sumDebe += debeVal; sumHaber += haberVal;
+                filasHTML += `
+                    <tr>
+                        <td class="text-muted small"><span class="badge bg-light text-dark border me-2">${det.CodigoSubcuenta}</span>${det.CuentaPrincipal}</td>
+                        <td class="monto font-monospace">${debeVal > 0 ? debeVal.toLocaleString('en-US', {minimumFractionDigits: 2}) : ''}</td>
+                        <td class="monto font-monospace">${haberVal > 0 ? haberVal.toLocaleString('en-US', {minimumFractionDigits: 2}) : ''}</td>
+                    </tr>`;
+            });
+
+            contenedor.innerHTML += `
+                <div class="card shadow-sm mb-4" style="border-radius: 12px; border: 1px solid var(--color-border); overflow: hidden;">
+                    <div class="card-header d-flex justify-content-between align-items-center py-3" style="background-color: var(--color-primary); color: white; border-bottom: none;">
+                        <span class="fw-bold fs-6"><i class="bi bi-hash" style="color: var(--color-secondary);"></i> Partida ${asiento.id}</span>
+                        <span class="badge shadow-sm" style="background-color: var(--color-secondary);"><i class="bi bi-calendar-event me-1"></i>${fechaFormateada}</span>
+                    </div>
+                    <div class="card-body bg-white border-0 pt-3">
+                        <p class="text-muted small mb-3 border-bottom pb-2"><i class="bi bi-card-text me-2" style="color: var(--color-primary);"></i><strong>Concepto:</strong> ${asiento.descripcion}</p>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 table-sm" style="border: 1px solid var(--color-border);">
+                                <thead style="background-color: var(--color-bg-app); color: var(--color-text-muted); border-bottom: 2px solid var(--color-border);">
+                                    <tr>
+                                        <th class="small text-uppercase py-2 px-3">Cuenta / Subcuenta</th>
+                                        <th width="20%" class="text-end small text-uppercase py-2" style="color: var(--color-success);">Debe ($)</th>
+                                        <th width="20%" class="text-end small text-uppercase py-2 pe-3" style="color: var(--color-danger);">Haber ($)</th>
+                                    </tr>
+                                </thead>
+                                <tbody style="border-top: none;">${filasHTML}</tbody>
+                                <tfoot style="background-color: var(--color-bg-app); border-top: 2px solid var(--color-border);">
+                                    <tr>
+                                        <td class="text-end text-muted small py-2 fw-bold">TOTALES</td>
+                                        <td class="monto font-monospace py-2" style="color: var(--color-success); font-weight: bold;">${sumDebe.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                        <td class="monto font-monospace py-2 pe-3" style="color: var(--color-danger); font-weight: bold;">${sumHaber.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>`;
+        }
+    } catch (error) {
+        console.error("Error al cargar el historial:", error);
+        contenedor.innerHTML = '<div class="alert alert-danger text-center">Error al cargar el historial.</div>';
+    }
+}
+
+window.exportarExcel = function() {
+    const contenedor = document.getElementById('contenedorAsientos');
+    if (!contenedor) return;
+    
+    // Create a temporary table containing all ledger entries
+    const table = document.createElement('table');
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Código</th>
+                <th>Cuenta</th>
+                <th>Concepto</th>
+                <th>Debe</th>
+                <th>Haber</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    `;
+    
+    const tbody = table.querySelector('tbody');
+    const asientosRows = contenedor.querySelectorAll('tbody tr');
+    
+    asientosRows.forEach(row => {
+        const isHead = row.classList.contains('table-light'); // it's an header row
+        const tds = row.querySelectorAll('td');
+        if (tds.length >= 4 && !isHead) {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.dataset.fecha || ''}</td>
+                <td>${row.dataset.codigo || ''}</td>
+                <td>${tds[0].textContent.trim()}</td>
+                <td>${tds[1].textContent.trim()}</td>
+                <td>${tds[2].textContent.trim()}</td>
+                <td>${tds[3].textContent.trim()}</td>
+            `;
+            tbody.appendChild(tr);
+        } else if (isHead && tds.length > 1) {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${tds[0].textContent.trim()}</td>
+                <td></td>
+                <td></td>
+                <td>${tds[1].textContent.trim()}</td>
+                <td></td>
+                <td></td>
+            `;
+            tbody.appendChild(tr);
+        }
+    });
+
+    let libro = XLSX.utils.table_to_book(table, {sheet: "Libro Diario"});
+    XLSX.writeFile(libro, `Libro_Diario_${document.getElementById('filtroLibro').value || 'Completo'}.xlsx`);
 }

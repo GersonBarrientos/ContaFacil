@@ -5,18 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mayorización - ContaFácil</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            #printHeader { display: block !important; }
+            body { background-color: #fff; padding: 0; }
+            main { margin: 0 !important; padding: 0 !important; }
+            .card { border: none !important; box-shadow: none !important; margin: 0 !important; }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="bg-light">
-    <div id="appNavbar"></div>
+    <div id="appNavbar" class="no-print"></div>
     <main class="container py-4">
-        <h1 class="h3 mb-4">Mayorización</h1>
-        <section class="card shadow-sm border-0 mb-4">
-            <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+            <h1 class="h3 mb-0">Mayorización</h1>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-success" onclick="exportarExcel()" title="Exportar a Excel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                <button class="btn btn-outline-danger" onclick="window.print()" title="Imprimir / PDF"><i class="bi bi-printer"></i> PDF</button>
+            </div>
+        </div>
+        <div id="printHeader" class="text-center d-none mb-4">
+            <h3 id="printEmpresa" class="mb-1"></h3>
+            <h5 id="printLibro" class="text-muted mb-1">Mayorización</h5>
+            <p id="printFecha" class="mb-0 text-muted"></p>
+        </div>
+        <section class="card shadow-sm mb-4 no-print" style="border-radius: 16px; border: 1px solid var(--color-border);">
+            <div class="card-body p-4">
                 <form id="filtroMayorizacion" class="row g-3 align-items-end">
-                    <div class="col-md-4"><label class="form-label fw-bold">Libro</label><select id="libro" class="form-select"><option value="">Todos los libros</option></select></div>
-                    <div class="col-md-3"><label class="form-label fw-bold">Desde</label><input id="fechaInicio" type="date" class="form-control" required></div>
-                    <div class="col-md-3"><label class="form-label fw-bold">Hasta</label><input id="fechaFin" type="date" class="form-control" required></div>
-                    <div class="col-md-2"><button class="btn btn-primary w-100">Consultar</button></div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small mb-1" style="color: var(--color-text-muted);">Libro Diario</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-journal-text text-muted"></i></span>
+                            <select id="libro" class="form-select border-start-0 bg-light"><option value="">Todos los libros</option></select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small mb-1" style="color: var(--color-text-muted);">Desde</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-calendar3 text-muted"></i></span>
+                            <input id="fechaInicio" type="date" class="form-control border-start-0 bg-light" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small mb-1" style="color: var(--color-text-muted);">Hasta</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-calendar3 text-muted"></i></span>
+                            <input id="fechaFin" type="date" class="form-control border-start-0 bg-light" required>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn text-white w-100 fw-bold d-flex align-items-center justify-content-center gap-2" style="background-color: var(--color-secondary); border-radius: 8px; height: 38px; box-shadow: 0 4px 6px rgba(0, 168, 150, 0.2);">
+                            <i class="bi bi-search"></i> Consultar
+                        </button>
+                    </div>
                 </form>
             </div>
         </section>

@@ -99,32 +99,32 @@ document.getElementById('filtroMayorizacion').addEventListener('submit', async e
             }).join('');
 
             html += `
-            <div class="card mb-4 shadow-sm border-0">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
-                    <h5 class="mb-0 fs-6"><i class="bi bi-wallet2 me-2"></i> ${cuenta.codigo || ''} - ${cuenta.nombre || ''}</h5>
-                    <span class="badge bg-primary fs-6">Saldo ${tipoSaldo}: ${money(valorSaldo)}</span>
+            <div class="card mb-4 shadow-sm" style="border-radius: 12px; border: 1px solid var(--color-border); overflow: hidden;">
+                <div class="card-header d-flex justify-content-between align-items-center py-3" style="background-color: var(--color-primary); color: white; border-bottom: none;">
+                    <h5 class="mb-0 fs-6 fw-bold"><i class="bi bi-wallet2 me-2" style="color: var(--color-secondary);"></i> ${cuenta.codigo || ''} - ${cuenta.nombre || ''}</h5>
+                    <span class="badge fs-6 shadow-sm" style="background-color: var(--color-secondary);">${tipoSaldo}: ${money(valorSaldo)}</span>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Asiento</th>
-                                <th>Descripción / Concepto</th>
-                                <th class="text-end">Debe</th>
-                                <th class="text-end">Haber</th>
-                                <th class="text-end">Saldo Acumulado</th>
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead style="background-color: var(--color-bg-app); color: var(--color-text-muted); border-bottom: 2px solid var(--color-border);">
+                            <tr class="small fw-bold">
+                                <th class="py-3 px-3">Fecha</th>
+                                <th class="py-3">Asiento</th>
+                                <th class="py-3">Descripción / Concepto</th>
+                                <th class="text-end py-3" style="color: var(--color-success);">Debe</th>
+                                <th class="text-end py-3" style="color: var(--color-danger);">Haber</th>
+                                <th class="text-end py-3 px-3">Saldo Acumulado</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody style="border-top: none;">
                             ${filasHTML}
                         </tbody>
-                        <tfoot class="table-group-divider bg-light">
+                        <tfoot style="background-color: var(--color-bg-app); border-top: 2px solid var(--color-border);">
                             <tr>
-                                <th colspan="3" class="text-end">Totales del Período</th>
-                                <th class="text-end text-primary">${money(cuenta.totalDebe)}</th>
-                                <th class="text-end text-primary">${money(cuenta.totalHaber)}</th>
-                                <th class="text-end"></th>
+                                <th colspan="3" class="text-end py-3 fw-bold" style="color: var(--color-text-main);">Totales del Período</th>
+                                <th class="text-end py-3 fw-bold" style="color: var(--color-success);">${money(cuenta.totalDebe)}</th>
+                                <th class="text-end py-3 fw-bold" style="color: var(--color-danger);">${money(cuenta.totalHaber)}</th>
+                                <th class="text-end py-3"></th>
                             </tr>
                         </tfoot>
                     </table>
@@ -145,5 +145,51 @@ document.getElementById('filtroMayorizacion').addEventListener('submit', async e
     const inicio = new Date(hoy.getFullYear(), 0, 1);
     document.getElementById('fechaInicio').value = inicio.toISOString().slice(0, 10);
     document.getElementById('fechaFin').value = hoy.toISOString().slice(0, 10);
-    try { await cargarLibros(); } catch (error) { mostrarMensaje(error.message); }
+    try { 
+        await cargarLibros();
+        const empresa = await (await fetch(`/api/empresa?idEmpresa=${idEmpresa}`)).json();
+        const pEmpresa = document.getElementById('printEmpresa');
+        if (pEmpresa) pEmpresa.textContent = empresa.nombre_comercial || empresa.nombre_legal || 'Mi Empresa';
+    } catch (error) { mostrarMensaje(error.message); }
 })();
+
+document.getElementById('filtroMayorizacion').addEventListener('submit', (e) => {
+    // update printFecha
+    const inicio = document.getElementById('fechaInicio').value;
+    const fin = document.getElementById('fechaFin').value;
+    const pFecha = document.getElementById('printFecha');
+    if (pFecha) pFecha.textContent = `Del ${inicio} al ${fin}`;
+    
+    // update printLibro
+    const selectL = document.getElementById('libro');
+    const pLibro = document.getElementById('printLibro');
+    if (pLibro && selectL.selectedIndex > -1) {
+        pLibro.textContent = `Mayorización - ${selectL.options[selectL.selectedIndex].text}`;
+    }
+});
+
+window.exportarExcel = function() {
+    const contenedor = document.getElementById('resultadosContainer');
+    if (!contenedor || contenedor.querySelectorAll('table').length === 0) {
+        alert("No hay datos para exportar. Por favor consulte un período primero.");
+        return;
+    }
+    
+    const tables = contenedor.querySelectorAll('table');
+    let wb = XLSX.utils.book_new();
+    
+    tables.forEach((table, index) => {
+        // the card header has the account name, we can try to extract it
+        let sheetName = "Cuenta " + (index+1);
+        try {
+            const h5 = table.closest('.card').querySelector('h5');
+            if (h5) {
+                sheetName = h5.textContent.trim().substring(0, 31); // excel sheet names max 31 chars
+            }
+        } catch (e) {}
+        let ws = XLSX.utils.table_to_sheet(table);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName.replace(/[\[\]\*:\?\/]/g, ''));
+    });
+    
+    XLSX.writeFile(wb, `Mayorizacion.xlsx`);
+}

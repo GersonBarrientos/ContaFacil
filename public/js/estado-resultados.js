@@ -269,3 +269,38 @@ function renderizarTabla(inventarioAuto = null, movimientosKardex = []) {
 
     document.getElementById('tabla-resultados').innerHTML = html;
 }
+
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        const empresa = await (await fetch(`/api/empresa?idEmpresa=${idEmpresa}`)).json();
+        const pEmpresa = document.getElementById('printEmpresa');
+        if (pEmpresa) pEmpresa.textContent = empresa.nombre_comercial || empresa.nombre_legal || 'Mi Empresa';
+    } catch (e) {}
+});
+
+// Extra: Update Print fields when form is submitted
+document.getElementById('form-filtros').addEventListener('submit', (e) => {
+    const pFecha = document.getElementById('printFecha');
+    if(pFecha) pFecha.textContent = `Del ${document.getElementById('fecha-inicio').value} al ${document.getElementById('fecha-fin').value}`;
+    
+    const selL = document.getElementById('select-libro');
+    const pLibro = document.getElementById('printLibro');
+    if(pLibro && selL.selectedIndex > -1) pLibro.textContent = `Estado de Resultados - ${selL.options[selL.selectedIndex].text}`;
+});
+
+window.exportarExcel = function() {
+    const tabla = document.querySelector('.table');
+    if (!tabla) return;
+    
+    // Convert inputs to values for Excel export
+    const cloneTable = tabla.cloneNode(true);
+    const inputs = cloneTable.querySelectorAll('input');
+    inputs.forEach(inp => {
+        const span = document.createElement('span');
+        span.textContent = inp.value;
+        inp.parentNode.replaceChild(span, inp);
+    });
+
+    let wb = XLSX.utils.table_to_book(cloneTable, {sheet: "Estado de Resultados"});
+    XLSX.writeFile(wb, `Estado_Resultados.xlsx`);
+}

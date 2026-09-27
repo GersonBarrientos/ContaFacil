@@ -10,18 +10,40 @@
         .sangria-1 { padding-left: 2rem !important; }
         .fila-totales { background-color: #f8f9fa !important; font-weight: bold; }
         .grupo-header { background-color: #2c3e50; color: white; font-weight: bold; }
+        @media print {
+            .no-print { display: none !important; }
+            #printHeader { display: block !important; }
+            body { background-color: #fff; padding: 0; }
+            .container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            .card { border: none !important; box-shadow: none !important; }
+            .table { border-collapse: collapse !important; width: 100% !important; }
+            .table th, .table td { border: 1px solid #000 !important; padding: 4px !important; font-size: 10pt; }
+        }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="bg-light">
-    <div id="appNavbar"></div>
+    <div id="appNavbar" class="no-print"></div>
 
     <div class="container mt-4 mb-5">
         <div class="row justify-content-center">
             <div class="col-lg-10">
-                <h2 class="text-center mb-4">Balance General</h2>
+                <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+                    <h2 class="mb-0">Balance General</h2>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-success" onclick="exportarExcel()" title="Exportar a Excel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                        <button class="btn btn-outline-danger" onclick="window.print()" title="Imprimir / PDF"><i class="bi bi-printer"></i> PDF</button>
+                    </div>
+                </div>
+
+                <div id="printHeader" class="text-center d-none mb-4">
+                    <h3 id="printEmpresa" class="mb-1"></h3>
+                    <h5 id="printLibro" class="text-muted mb-1">Balance General</h5>
+                    <p id="printFecha" class="mb-0 text-muted"></p>
+                </div>
                 
                 <!-- Panel de Filtros -->
-                <div class="card shadow-sm border-0 mb-4 bg-white">
+                <div class="card shadow-sm border-0 mb-4 bg-white no-print">
                     <div class="card-body">
                         <form id="form-filtros" class="row g-3 align-items-end">
                             <div class="col-md-4">
@@ -71,6 +93,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/navbar.js"></script>
     <script src="/js/balance-general.js"></script>
 </body>

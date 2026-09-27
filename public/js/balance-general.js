@@ -204,3 +204,29 @@ function renderizarBalance() {
 
     document.getElementById('cuerpo-balance').innerHTML = html;
 }
+
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        const empresa = await (await fetch(`/api/empresa?idEmpresa=${idEmpresa}`)).json();
+        const pEmpresa = document.getElementById('printEmpresa');
+        if (pEmpresa) pEmpresa.textContent = empresa.nombre_comercial || empresa.nombre_legal || 'Mi Empresa';
+    } catch (e) {}
+});
+
+// Extra: Update Print fields when form is submitted
+document.getElementById('form-filtros').addEventListener('submit', (e) => {
+    const pFecha = document.getElementById('printFecha');
+    if(pFecha) pFecha.textContent = `Al ${document.getElementById('fecha-fin').value}`;
+    
+    const selL = document.getElementById('select-libro');
+    const pLibro = document.getElementById('printLibro');
+    if(pLibro && selL.selectedIndex > -1) pLibro.textContent = `Balance General - ${selL.options[selL.selectedIndex].text}`;
+});
+
+window.exportarExcel = function() {
+    const tabla = document.getElementById('tabla-balance');
+    if (!tabla) return;
+
+    let wb = XLSX.utils.table_to_book(tabla, {sheet: "Balance General"});
+    XLSX.writeFile(wb, `Balance_General.xlsx`);
+}

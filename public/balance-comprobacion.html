@@ -17,6 +17,7 @@
             th, td { border: 1px solid #dee2e6 !important; padding: 0.25rem !important; }
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="bg-light">
     <div id="appNavbar" class="no-print"></div>
@@ -24,9 +25,14 @@
     <div class="container my-4">
         <div class="d-flex justify-content-between align-items-center mb-4 no-print">
             <h2 class="mb-0"><i class="bi bi-clipboard-check text-primary me-2"></i> Balance de Comprobación</h2>
-            <button class="btn btn-outline-secondary" onclick="window.print()">
-                <i class="bi bi-printer me-2"></i> Imprimir
-            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-success" onclick="exportarExcel()" title="Exportar a Excel">
+                    <i class="bi bi-file-earmark-excel me-2"></i> Excel
+                </button>
+                <button class="btn btn-outline-secondary" onclick="window.print()" title="Imprimir / PDF">
+                    <i class="bi bi-printer me-2"></i> Imprimir
+                </button>
+            </div>
         </div>
 
         <div class="card shadow-sm mb-4 no-print">
@@ -75,7 +81,7 @@
         <div id="mensajeArea" class="no-print"></div>
 
         <div id="reporteArea" style="display: none;">
-            <div class="text-center mb-4">
+            <div id="printHeader" class="text-center d-none d-print-block mb-4">
                 <h3 id="printEmpresa" class="mb-1"></h3>
                 <h5 id="printLibro" class="text-muted mb-1"></h5>
                 <p id="printFecha" class="mb-0 text-muted"></p>

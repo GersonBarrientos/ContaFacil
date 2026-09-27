@@ -153,3 +153,13 @@ form.addEventListener('submit', async (e) => {
 });
 
 inicializar();
+
+window.exportarExcel = function() {
+    const tabla = document.querySelector('.table');
+    if (!tabla) return;
+    
+    // Convert inputs to values just in case
+    const cloneTable = tabla.cloneNode(true);
+    let wb = XLSX.utils.table_to_book(cloneTable, {sheet: "Balance de Comprobación"});
+    XLSX.writeFile(wb, `Balance_Comprobacion.xlsx`);
+}
