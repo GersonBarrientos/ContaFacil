@@ -168,9 +168,32 @@ const obtenerEstadoResultados = async (idLibro, fechaInicio, fechaFin) => {
         throw error;
     }
 };
+//balance General 
+const obtenerBalanceGeneral = async (idLibro, fechaInicio, fechaFin) => {
+    try {
+        const query = `
+            SELECT 
+                SUBSTRING(h.codigo_subcuenta, 1, 4) AS "CodigoMayor",
+                h.cuenta_principal AS "NombreCuenta",
+                SUM(COALESCE(h.debe, 0)) AS "TotalDebe",
+                SUM(COALESCE(h.haber, 0)) AS "TotalHaber"
+            FROM public.vw_historial_asientos h
+            WHERE (h.codigo_subcuenta LIKE '1%' OR h.codigo_subcuenta LIKE '2%' OR h.codigo_subcuenta LIKE '3%')
+              AND h.id_libro = $1
+              AND h.fecha BETWEEN $2::date AND $3::date
+            GROUP BY SUBSTRING(h.codigo_subcuenta, 1, 4), h.cuenta_principal
+            ORDER BY "CodigoMayor";
+        `;
+        const { rows } = await pool.query(query, [idLibro, fechaInicio, fechaFin]);
+        return rows;
+    } catch (error) {
+        console.error("Error en modelo obtenerBalanceGeneral:", error);
+        throw error;
+    }
+};
 module.exports = {
     obtenerEmpresaActual, actualizarEmpresa, obtenerLibros, crearLibro,
     actualizarLibro, eliminarLibro, getCuentas, guardarAsiento,
     obtenerHistorialAsientos, obtenerMayorizacion, obtenerBalanceComprobacion,
-    verificarLibroActivo,obtenerEstadoResultados
+    verificarLibroActivo,obtenerEstadoResultados,obtenerBalanceGeneral
 };

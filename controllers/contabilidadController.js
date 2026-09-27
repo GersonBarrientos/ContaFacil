@@ -228,6 +228,23 @@ const getEstadoResultados = async (req, res) => {
         res.status(500).send("Error interno del servidor");
     }
 };
+
+//balance general
+const getBalanceGeneral = async (req, res) => {
+    try {
+        const { idLibro, fechaInicio, fechaFin } = req.query;
+        
+        if (!idLibro || !fechaInicio || !fechaFin) {
+            return res.status(400).json({ error: "Faltan parámetros de filtrado" });
+        }
+
+        const resultados = await ContabilidadModel.obtenerBalanceGeneral(idLibro, fechaInicio, fechaFin);
+        res.json(resultados);
+    } catch (error) {
+        console.error("Error al obtener el Balance General:", error);
+        res.status(500).send("Error interno del servidor");
+    }
+};
 // Exportamos las tres funciones juntas al final del archivo
 module.exports = {
     obtenerEmpresa,
@@ -241,6 +258,8 @@ module.exports = {
     getHistorial,
     obtenerMayorizacion,
     obtenerBalanceComprobacion,
-    getEstadoResultados
+    getEstadoResultados,
+    getBalanceGeneral
    
 };
+

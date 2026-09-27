@@ -99,7 +99,7 @@ function alCambiarSubcuenta() {
     }
 }
 
-// 4. Función para agregar datos a la tabla (Botón "+")
+
 // 4. Función para agregar datos a la tabla (Botón "+") con cálculo de IVA
 function agregarLinea() {
     const fecha = document.getElementById('inputFecha').value;
@@ -159,8 +159,19 @@ function agregarLinea() {
 
     // B. Insertar automáticamente las líneas del IVA si aplica
     if (montoIva > 0) {
-        // Si el monto está en el Debe (ej. Compra), usa Crédito. Si está en el Haber (ej. Venta), usa Débito.
-        const nombreCuentaIva = isDebe ? 'IVA - CRÉDITO FISCAL' : 'IVA - DÉBITO FISCAL';
+
+// Lógica inteligente para determinar la cuenta de IVA correcta
+        let nombreCuentaIva = isDebe ? 'IVA - CRÉDITO FISCAL' : 'IVA - DÉBITO FISCAL';
+        const nombreCuentaNormalizado = categoriaPrincipal.toLowerCase();
+        
+        // Si la cuenta tiene la palabra "compra" (ej. Compras, Devoluciones sobre compras), fuerza el Crédito Fiscal
+        if (nombreCuentaNormalizado.includes('compra')) {
+            nombreCuentaIva = 'IVA - CRÉDITO FISCAL';
+        } 
+        // Si la cuenta tiene la palabra "venta" (ej. Ventas, Devoluciones sobre ventas), fuerza el Débito Fiscal
+        else if (nombreCuentaNormalizado.includes('venta')) {
+            nombreCuentaIva = 'IVA - DÉBITO FISCAL';
+        }
         
         // Busca en tu catálogo la subcuenta de ese IVA
         const subcuentasIva = cuentasAgrupadas[nombreCuentaIva];

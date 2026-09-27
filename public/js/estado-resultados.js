@@ -1,5 +1,7 @@
 // Variables globales para los datos
-        let datosCuentas = [];
+let datosCuentas = [];
+// Variable global para guardar el inventario automático
+let inventarioFinalKardex = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     cargarLibros();
@@ -26,9 +28,6 @@ async function cargarLibros() {
         console.error('Error al cargar libros:', error);
     }
 }
-
-// Variable global para guardar el inventario automático
-let inventarioFinalKardex = 0;
 
 async function cargarEstadoResultados(event) {
     event.preventDefault(); // Evita que la página se recargue
@@ -80,13 +79,14 @@ async function cargarEstadoResultados(event) {
             // Inventario Global = Todo lo que entró - Todo lo que salió
             inventarioFinalKardex = sumaEntradas - sumaSalidas;
             
+            // 3. Renderizamos la tabla y le pasamos el valor automático y los movimientos
+            renderizarTabla(inventarioFinalKardex, movimientos);
+
         } catch (errorKardex) {
             console.warn("No se pudo conectar con el Kardex", errorKardex);
             inventarioFinalKardex = 0;
+            renderizarTabla(inventarioFinalKardex, []); // Renderiza aunque falle el kardex
         }
-        
-        // 3. Renderizamos la tabla y le pasamos el valor automático
-        renderizarTabla(inventarioFinalKardex);
 
     } catch (error) {
         console.error('Error al cargar:', error);
@@ -94,9 +94,9 @@ async function cargarEstadoResultados(event) {
             '<tr><td colspan="4" class="text-center text-danger py-4">Ocurrió un error al cargar el reporte con los parámetros indicados.</td></tr>';
     }
 }
+
 // Función para buscar el saldo de una cuenta por su nombre o parte de él
 function obtenerSaldo(palabraClave) {
-  
     const cuenta = datosCuentas.find(c => c.NombreCuenta.toLowerCase().includes(palabraClave.toLowerCase()));
     if (!cuenta) return 0;
     
@@ -108,13 +108,41 @@ function obtenerSaldo(palabraClave) {
     }
 }
 
-        // Función para formatear a moneda
-        function formatoDinero(cantidad) {
-            if (cantidad === 0 || isNaN(cantidad)) return "";
-            return "$" + cantidad.toFixed(2);
-        }
+// Función inteligente para calcular el Inventario Inicial desde el Kardex
+function calcularInventarioInicialKardex(kardexData, fechaInicioStr) {
+    if (!kardexData || !Array.isArray(kardexData)) return 0;
 
-        function renderizarTabla(inventarioAuto = null) {
+    let saldoInicial = 0;
+    const fechaCorteInicial = new Date(fechaInicioStr + "T00:00:00").getTime();
+
+    kardexData.forEach(mov => {
+        const fechaMov = new Date(mov.fecha).getTime();
+        const costo = Number(mov.costo_total || 0);
+        const concepto = (mov.concepto || "").toLowerCase();
+        
+        // Sumar si el movimiento fue ANTES de la fecha "Desde" del reporte
+        // O si fue el mismo día de inicio y está clasificado como "Inventario Inicial"
+        if (fechaMov < fechaCorteInicial || (fechaMov === fechaCorteInicial && concepto.includes('inventario inicial'))) {
+            
+            if (['INVENTARIO_INICIAL', 'COMPRA', 'DEV_VENTA', 'ENTRADA'].includes(mov.tipo_movimiento) || concepto.includes('inventario inicial')) {
+                saldoInicial += costo;
+            } else {
+                saldoInicial -= costo;
+            }
+        }
+    });
+    
+    return saldoInicial;
+}
+
+// Función para formatear a moneda
+function formatoDinero(cantidad) {
+    if (cantidad === 0 || isNaN(cantidad)) return "";
+    return "$" + cantidad.toFixed(2);
+}
+
+// Renderiza la tabla
+function renderizarTabla(inventarioAuto = null, movimientosKardex = []) {
     const ventas = obtenerSaldo('Venta');
     const devVentas = Math.abs(obtenerSaldo('Devoluciones sobre venta') || obtenerSaldo('Rebajas sobre venta'));
     const ventasNetas = ventas - devVentas;
@@ -126,7 +154,11 @@ function obtenerSaldo(palabraClave) {
     const devCompras = Math.abs(obtenerSaldo('Devoluciones sobre compra'));
     const comprasNetas = comprasTotales - devCompras;
 
-    const inventarioInicial = obtenerSaldo('Inventario') || 0; 
+    const fechaDesde = document.getElementById('fecha-inicio').value; 
+    
+    // Le pasamos la variable correcta (movimientosKardex)
+    const inventarioInicial = calcularInventarioInicialKardex(movimientosKardex, fechaDesde); 
+
     const mercaderiaDisponible = comprasNetas + inventarioInicial;
 
     // Asignación inteligente del Inventario Final
@@ -141,10 +173,11 @@ function obtenerSaldo(palabraClave) {
     const gastosFinancieros = obtenerSaldo('Gastos financieros');
     
     const utilidadOperacional = utilidadBruta - gastosOperacion - gastosFinancieros;
-
+    
     // Definimos el HTML de la celda del inventario. Si viene automático, se bloquea y se pinta de gris.
+    
     const inputHTML = `<input type="number" id="inv-final" class="input-inventario ${inventarioAuto !== null ? 'bg-light text-muted border-0' : ''}" value="${inventarioFinal}" ${inventarioAuto !== null ? 'readonly' : 'onchange="renderizarTabla()"'}>`;
-
+    
     const html = `
         <tr>
             <td>Ventas</td>

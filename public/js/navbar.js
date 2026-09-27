@@ -9,7 +9,8 @@ const enlaces = [
     ['mayorizacion.html', 'bar-chart-line', 'Mayorización'],
     ['balance-comprobacion.html', 'clipboard-check', 'Balance de comprobación'],
     ['kardex.html', 'box-seam', 'Tarjeta Kardex'],
-    ['estado-resultados.html', 'graph-up', 'Estado de Resultados']
+    ['estado-resultados.html', 'graph-up', 'Estado de Resultados'],
+    ['balance-general.html', 'bank', 'Balance General']
 ];
 
 const navbar = `

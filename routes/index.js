@@ -5,7 +5,7 @@ const router = express.Router();
 const {
     obtenerEmpresa, actualizarEmpresa, obtenerLibros, crearLibro, actualizarLibro, eliminarLibro,
     obtenerCuentas, crearAsiento, getHistorial, obtenerMayorizacion, obtenerBalanceComprobacion,
-    getEstadoResultados // <-- 1. Importamos la nueva función
+    getEstadoResultados, getBalanceGeneral // <-- 1. Importamos la función del Balance General
 } = require('../controllers/contabilidadController');
 
 const kardexController = require('../controllers/kardexController');
@@ -32,7 +32,10 @@ router.get('/cuentas', obtenerCuentas);
 router.post('/asientos', crearAsiento);
 
 // Ruta del Estado de Resultados
-router.get('/estado-resultados', getEstadoResultados); // <-- 2. Declaramos la ruta pública
+router.get('/estado-resultados', getEstadoResultados);
+
+// Ruta del Balance General
+router.get('/balance-cuentas', getBalanceGeneral); // <-- 2. Declaramos la ruta pública del Balance
 
 // Rutas del Kardex
 router.get('/kardex-articulos', kardexController.obtenerListaArticulos); 
