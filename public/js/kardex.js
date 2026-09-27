@@ -29,20 +29,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (btnVerGlobal) {
-        btnVerGlobal.addEventListener('click', () => {
+        btnVerGlobal.addEventListener('click', (e) => {
+            e.preventDefault();
             if (cajaBuscador) cajaBuscador.style.display = 'none';
+            btnVerGlobal.classList.add('active');
+            btnVerIndividual.classList.remove('active');
             cargarHistorial('GLOBAL');
         });
     }
 
     if (btnVerIndividual) {
-        btnVerIndividual.addEventListener('click', () => {
+        btnVerIndividual.addEventListener('click', (e) => {
+            e.preventDefault();
             if (cajaBuscador) cajaBuscador.style.display = 'block';
+            btnVerIndividual.classList.add('active');
+            btnVerGlobal.classList.remove('active');
             const titulo = document.getElementById('tituloHistorial');
             if (titulo) titulo.innerText = 'Kardex Individual (Selecciona un artículo)';
             
             const tbody = document.getElementById('cuerpoTablaKardex');
-            if (tbody) tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted">Selecciona un artículo arriba y haz clic en Cargar.</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted py-5"><i class="bi bi-search fs-1 d-block mb-2"></i>Selecciona un artículo arriba y haz clic en Buscar.</td></tr>';
             
             const tfoot = document.getElementById('pieTablaKardex');
             if (tfoot) tfoot.innerHTML = '';
@@ -199,16 +205,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${fechaLimpia}</td>
                         <td>${visualizacionArticulo}</td>
                         <td class="text-start"><small>${mov.concepto}</small></td>
-                        <td class="${esEntrada ? 'text-success' : ''}">${esEntrada ? mov.cantidad : '-'}</td>
-                        <td class="${esEntrada ? 'text-success' : ''}">${esEntrada ? '$'+Number(mov.costo_unitario).toFixed(2) : '-'}</td>
-                        <td class="${esEntrada ? 'text-success fw-bold' : ''}">${esEntrada ? '$'+Number(mov.costo_total).toFixed(2) : '-'}</td>
-                        <td class="${!esEntrada ? 'text-danger' : ''}">${!esEntrada ? mov.cantidad : '-'}</td>
-                        <td class="${!esEntrada ? 'text-danger' : ''}">${!esEntrada ? '$'+Number(mov.costo_unitario).toFixed(2) : '-'}</td>
-                        <td class="${!esEntrada ? 'text-danger fw-bold' : ''}">${!esEntrada ? '$'+Number(mov.costo_total).toFixed(2) : '-'}</td>
-                        <td class="bg-light">${mov.saldo_cantidad}</td>
-                        <td class="bg-light">$${Number(mov.saldo_costo_unitario).toFixed(2)}</td>
-                        <td class="bg-light fw-bold">$${Number(mov.saldo_total).toFixed(2)}</td>
-                        <td class="no-print">${btnAnular}</td>
+                        
+                        <td class="bg-soft-entradas border-left-sutil ${esEntrada ? 'text-success' : ''}">${esEntrada ? mov.cantidad : '-'}</td>
+                        <td class="bg-soft-entradas ${esEntrada ? 'text-success' : ''}">${esEntrada ? '$'+Number(mov.costo_unitario).toFixed(2) : '-'}</td>
+                        <td class="bg-soft-entradas ${esEntrada ? 'text-success fw-bold' : ''}">${esEntrada ? '$'+Number(mov.costo_total).toFixed(2) : '-'}</td>
+                        
+                        <td class="bg-soft-salidas border-left-sutil ${!esEntrada ? 'text-danger' : ''}">${!esEntrada ? mov.cantidad : '-'}</td>
+                        <td class="bg-soft-salidas ${!esEntrada ? 'text-danger' : ''}">${!esEntrada ? '$'+Number(mov.costo_unitario).toFixed(2) : '-'}</td>
+                        <td class="bg-soft-salidas ${!esEntrada ? 'text-danger fw-bold' : ''}">${!esEntrada ? '$'+Number(mov.costo_total).toFixed(2) : '-'}</td>
+                        
+                        <td class="bg-soft-existencias border-left-sutil">${mov.saldo_cantidad}</td>
+                        <td class="bg-soft-existencias">$${Number(mov.saldo_costo_unitario).toFixed(2)}</td>
+                        <td class="bg-soft-existencias fw-bold">$${Number(mov.saldo_total).toFixed(2)}</td>
+                        
+                        <td class="no-print border-left-sutil">${btnAnular}</td>
                     </tr>
                 `;
                 saldoFinalCant = mov.saldo_cantidad;
@@ -217,10 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tfoot.innerHTML = `
                 <tr>
-                    <td colspan="9" class="text-end text-uppercase fw-bold text-primary fs-5">Inventario Final:</td>
-                    <td class="bg-warning text-dark text-center fs-5 fw-bold">${saldoFinalCant}</td>
-                    <td class="bg-warning text-dark text-center fw-bold">$${Number(saldoFinalValor/saldoFinalCant || 0).toFixed(2)}</td>
-                    <td class="bg-warning text-dark text-center fs-5 fw-bold">$${Number(saldoFinalValor).toFixed(2)}</td>
+                    <td colspan="9" class="text-end text-uppercase fw-bold text-muted fs-6 py-3">Inventario Final:</td>
+                    <td class="bg-dark text-white text-center fs-6 fw-bold border-0 rounded-start-pill py-3">${saldoFinalCant}</td>
+                    <td class="bg-dark text-white text-center border-0 py-3">$${Number(saldoFinalValor/saldoFinalCant || 0).toFixed(2)}</td>
+                    <td class="bg-dark text-white text-center fs-6 fw-bold border-0 rounded-end-pill py-3">$${Number(saldoFinalValor).toFixed(2)}</td>
                     <td class="no-print"></td>
                 </tr>
             `;

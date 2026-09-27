@@ -7,6 +7,13 @@ const checkRango = document.getElementById('checkRango');
 const inputFechaInicio = document.getElementById('inputFechaInicio');
 const inputFechaFin = document.getElementById('inputFechaFin');
 
+const emptyState = document.getElementById('emptyState');
+const kpiArea = document.getElementById('kpiArea');
+const kpiCard = document.getElementById('kpiCard');
+const kpiIcon = document.getElementById('kpiIcon');
+const kpiTitle = document.getElementById('kpiTitle');
+const kpiSubtitle = document.getElementById('kpiSubtitle');
+
 const money = value => {
     if (!value || Number(value) === 0) return '';
     return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
@@ -71,9 +78,10 @@ form.addEventListener('submit', async (e) => {
     }
 
     btnGenerar.disabled = true;
-    btnGenerar.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generando...';
+    btnGenerar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando...';
     mensajeArea.innerHTML = '';
     reporteArea.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
 
     try {
         let url = `/api/balance-comprobacion?idEmpresa=${idEmpresa}&idLibro=${idLibro}&fechaFin=${fechaFin}`;
@@ -98,7 +106,8 @@ form.addEventListener('submit', async (e) => {
         document.getElementById('printFecha').textContent = textoFecha;
 
         if (filas.length === 0) {
-            mensajeArea.innerHTML = `<div class="alert alert-info">Sin movimientos al corte.</div>`;
+            mensajeArea.innerHTML = `<div class="alert alert-info"><i class="bi bi-info-circle me-2"></i> Sin movimientos al corte.</div>`;
+            if (emptyState) emptyState.style.display = 'block';
             return;
         }
 
@@ -121,7 +130,7 @@ form.addEventListener('submit', async (e) => {
 
         // Pintar total
         document.getElementById('tablaPie').innerHTML = `
-            <tr class="fw-bold bg-light">
+            <tr class="table-totals">
                 <td colspan="2" class="text-end">TOTALES</td>
                 <td class="text-end tabular-nums col-sumas">${money(total.sumas_debe)}</td>
                 <td class="text-end tabular-nums col-sumas">${money(total.sumas_haber)}</td>
@@ -130,22 +139,28 @@ form.addEventListener('submit', async (e) => {
             </tr>
         `;
 
-        // Alerta de cuadre
-        const alerta = document.getElementById('alertaCuadre');
-        alerta.style.display = 'block';
-        if (total.cuadra) {
-            alerta.className = 'alert mt-3 no-print alert-success';
-            alerta.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> El balance cuadra correctamente.`;
-        } else {
-            const diff = Math.abs(Math.round(Number(total.saldo_deudor)*100) - Math.round(Number(total.saldo_acreedor)*100)) / 100;
-            alerta.className = 'alert mt-3 no-print alert-danger';
-            alerta.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>No cuadra:</strong> Diferencia de $${money(diff)}`;
+        // KPI de cuadre
+        if (kpiArea) {
+            kpiArea.style.display = 'block';
+            if (total.cuadra) {
+                kpiCard.className = 'kpi-card kpi-success shadow-sm';
+                kpiIcon.innerHTML = '<i class="bi bi-shield-check"></i>';
+                kpiTitle.textContent = 'Balance Cuadrado';
+                kpiSubtitle.textContent = 'Los saldos deudor y acreedor coinciden perfectamente.';
+            } else {
+                const diff = Math.abs(Math.round(Number(total.saldo_deudor)*100) - Math.round(Number(total.saldo_acreedor)*100)) / 100;
+                kpiCard.className = 'kpi-card kpi-danger shadow-sm';
+                kpiIcon.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
+                kpiTitle.textContent = 'Descuadre Encontrado';
+                kpiSubtitle.innerHTML = `Diferencia detectada de <strong>$${money(diff)}</strong>`;
+            }
         }
 
         reporteArea.style.display = 'block';
         aplicarFormato();
     } catch (e) {
-        mensajeArea.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`;
+        mensajeArea.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-octagon me-2"></i> ${esc(e.message)}</div>`;
+        if (emptyState) emptyState.style.display = 'block';
     } finally {
         btnGenerar.disabled = false;
         btnGenerar.innerHTML = '<i class="bi bi-gear me-2"></i> Generar';

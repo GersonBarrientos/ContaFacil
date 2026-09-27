@@ -36,8 +36,16 @@ async function cargarEstadoResultados(event) {
     const fechaInicio = document.getElementById('fecha-inicio').value;
     const fechaFin = document.getElementById('fecha-fin').value;
 
-    document.getElementById('tabla-resultados').innerHTML = 
-        '<tr><td colspan="4" class="text-center text-primary py-4"><i class="bi bi-hourglass-split"></i> Generando reporte...</td></tr>';
+    const btnGenerar = document.getElementById('btn-generar');
+    const emptyState = document.getElementById('emptyState');
+    const reporteArea = document.getElementById('reporteArea');
+    
+    if (btnGenerar) {
+        btnGenerar.disabled = true;
+        btnGenerar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando...';
+    }
+    if (emptyState) emptyState.style.display = 'none';
+    if (reporteArea) reporteArea.style.display = 'none';
 
     try {
         // 1. Obtener datos de ingresos y gastos
@@ -88,10 +96,17 @@ async function cargarEstadoResultados(event) {
             renderizarTabla(inventarioFinalKardex, []); // Renderiza aunque falle el kardex
         }
 
+        if (reporteArea) reporteArea.style.display = 'block';
+
     } catch (error) {
         console.error('Error al cargar:', error);
-        document.getElementById('tabla-resultados').innerHTML = 
-            '<tr><td colspan="4" class="text-center text-danger py-4">Ocurrió un error al cargar el reporte con los parámetros indicados.</td></tr>';
+        if (emptyState) emptyState.style.display = 'block';
+        alert('Ocurrió un error al cargar el reporte con los parámetros indicados.');
+    } finally {
+        if (btnGenerar) {
+            btnGenerar.disabled = false;
+            btnGenerar.innerHTML = '<i class="bi bi-search me-1"></i> Generar';
+        }
     }
 }
 
@@ -175,8 +190,29 @@ function renderizarTabla(inventarioAuto = null, movimientosKardex = []) {
     const utilidadOperacional = utilidadBruta - gastosOperacion - gastosFinancieros;
     
     // Definimos el HTML de la celda del inventario. Si viene automático, se bloquea y se pinta de gris.
+    // Actualizar KPI
+    const kpiCard = document.getElementById('kpiCard');
+    const kpiIcon = document.getElementById('kpiIcon');
+    const kpiTitle = document.getElementById('kpiTitle');
+    const kpiValue = document.getElementById('kpiValue');
+
+    if (kpiCard) {
+        if (utilidadOperacional >= 0) {
+            kpiCard.className = 'kpi-card kpi-success shadow-sm';
+            kpiIcon.innerHTML = '<i class="bi bi-graph-up-arrow"></i>';
+            kpiTitle.textContent = 'Utilidad del Ejercicio';
+            kpiValue.textContent = formatoDinero(utilidadOperacional);
+        } else {
+            kpiCard.className = 'kpi-card kpi-danger shadow-sm';
+            kpiIcon.innerHTML = '<i class="bi bi-graph-down-arrow"></i>';
+            kpiTitle.textContent = 'Pérdida del Ejercicio';
+            kpiValue.textContent = formatoDinero(Math.abs(utilidadOperacional));
+        }
+    }
     
     const inputHTML = `<input type="number" id="inv-final" class="input-inventario ${inventarioAuto !== null ? 'bg-light text-muted border-0' : ''}" value="${inventarioFinal}" ${inventarioAuto !== null ? 'readonly' : 'onchange="renderizarTabla()"'}>`;
+    
+    const claseFilaFinal = utilidadOperacional >= 0 ? 'table-success-premium' : 'table-danger-premium';
     
     const html = `
         <tr>
@@ -260,10 +296,10 @@ function renderizarTabla(inventarioAuto = null, movimientosKardex = []) {
             <td class="text-end border-bottom border-dark">${formatoDinero(gastosFinancieros)}</td>
             <td></td>
         </tr>
-        <tr class="table-success fw-bold">
-            <td>Utilidad operacional antes de impuestos</td>
+        <tr class="${claseFilaFinal}">
+            <td>Resultado del ejercicio (antes de imp.)</td>
             <td></td><td></td>
-            <td class="text-end">$${utilidadOperacional.toFixed(2)}</td>
+            <td class="text-end font-monospace">$${utilidadOperacional.toFixed(2)}</td>
         </tr>
     `;
 

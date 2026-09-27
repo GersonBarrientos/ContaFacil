@@ -33,8 +33,16 @@ async function generarBalance(event) {
     const fechaInicio = document.getElementById('fecha-inicio').value;
     const fechaFin = document.getElementById('fecha-fin').value;
 
-    document.getElementById('cuerpo-balance').innerHTML = 
-        '<tr><td colspan="3" class="text-center text-primary py-4"><i class="bi bi-hourglass-split"></i> Cuadrando cuentas y calculando utilidad...</td></tr>';
+    const btnGenerar = document.getElementById('btn-generar');
+    const emptyState = document.getElementById('emptyState');
+    const reporteArea = document.getElementById('reporteArea');
+
+    if (btnGenerar) {
+        btnGenerar.disabled = true;
+        btnGenerar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando...';
+    }
+    if (emptyState) emptyState.style.display = 'none';
+    if (reporteArea) reporteArea.style.display = 'none';
 
     try {
         // 1. Obtener saldos de cuentas de Balance (1, 2, 3)
@@ -54,11 +62,18 @@ async function generarBalance(event) {
         utilidadEjercicio = calcularUtilidadNeta(datosResultados, dataKardex, fechaInicio, fechaFin);
 
         renderizarBalance();
+        if (reporteArea) reporteArea.style.display = 'block';
 
     } catch (error) {
         console.error("Error al generar el balance:", error);
-        document.getElementById('cuerpo-balance').innerHTML = 
-            '<tr><td colspan="3" class="text-center text-danger py-4">Error al generar el reporte. Verifica la consola.</td></tr>';
+        if (emptyState) emptyState.style.display = 'block';
+        alert("Error al generar el reporte. Verifica la consola.");
+    } finally {
+        const btnGenerar = document.getElementById('btn-generar');
+        if (btnGenerar) {
+            btnGenerar.disabled = false;
+            btnGenerar.innerHTML = '<i class="bi bi-search me-1"></i> Generar';
+        }
     }
 }
 
@@ -169,37 +184,59 @@ function renderizarBalance() {
 
     const formatear = (num) => "$" + num.toLocaleString('en-US', {minimumFractionDigits: 2});
     
-    // Verificamos si cuadra
+    // Verificamos si cuadra y llenamos el KPI
     const estaCuadrado = Math.abs(totalActivo - pasivoMasPatrimonio) < 0.01;
-    const colorCuadre = estaCuadrado ? 'text-success' : 'text-danger';
+    const colorCuadre = estaCuadrado ? 'table-success-premium' : 'table-danger-premium';
+    
+    const kpiArea = document.getElementById('kpiArea');
+    const kpiCard = document.getElementById('kpiCard');
+    const kpiIcon = document.getElementById('kpiIcon');
+    const kpiTitle = document.getElementById('kpiTitle');
+    const kpiValue = document.getElementById('kpiValue');
+
+    if (kpiArea) {
+        kpiArea.style.display = 'block';
+        if (estaCuadrado) {
+            kpiCard.className = 'kpi-card kpi-success shadow-sm';
+            kpiIcon.innerHTML = '<i class="bi bi-shield-check"></i>';
+            kpiTitle.textContent = 'Balance Cuadrado';
+            kpiValue.textContent = 'Activo = Pasivo + Patrimonio';
+        } else {
+            const diff = Math.abs(totalActivo - pasivoMasPatrimonio);
+            kpiCard.className = 'kpi-card kpi-danger shadow-sm';
+            kpiIcon.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
+            kpiTitle.textContent = 'Descuadre Encontrado';
+            kpiValue.innerHTML = `Diferencia: <strong>${formatear(diff)}</strong>`;
+        }
+    }
 
     const html = `
         <tr class="grupo-header"><td colspan="3">ACTIVOS</td></tr>
-        <tr class="table-light fw-bold"><td colspan="3">Activo Corriente</td></tr>
-        <tr><td class="sangria-1">Efectivo y equivalentes</td><td class="text-end">${formatear(efectivo)}</td><td></td></tr>
-        <tr><td class="sangria-1">Cuentas por cobrar comerciales</td><td class="text-end">${formatear(cuentasCobrar)}</td><td></td></tr>
-        <tr><td class="sangria-1">Inventarios (Kardex Final)</td><td class="text-end">${formatear(inventario)}</td><td></td></tr>
-        <tr><td class="sangria-1">IVA - Crédito Fiscal</td><td class="text-end border-bottom">${formatear(ivaCredito)}</td><td></td></tr>
-        <tr class="fila-totales"><td>Total Activo Corriente</td><td></td><td class="text-end">${formatear(totalActivoCorriente)}</td></tr>
+        <tr class="subgrupo-header"><td colspan="3">Activo Corriente</td></tr>
+        <tr><td class="sangria-1">Efectivo y equivalentes</td><td class="text-end font-monospace border-0">${formatear(efectivo)}</td><td class="border-0"></td></tr>
+        <tr><td class="sangria-1">Cuentas por cobrar comerciales</td><td class="text-end font-monospace border-0">${formatear(cuentasCobrar)}</td><td class="border-0"></td></tr>
+        <tr><td class="sangria-1">Inventarios (Kardex Final)</td><td class="text-end font-monospace border-0">${formatear(inventario)}</td><td class="border-0"></td></tr>
+        <tr><td class="sangria-1">IVA - Crédito Fiscal</td><td class="text-end font-monospace">${formatear(ivaCredito)}</td><td></td></tr>
+        <tr class="fila-totales"><td>Total Activo Corriente</td><td></td><td class="text-end font-monospace">${formatear(totalActivoCorriente)}</td></tr>
         
-        <tr class="table-light fw-bold"><td colspan="3">Activo No Corriente</td></tr>
-        <tr><td class="sangria-1">Propiedad, planta y equipo</td><td class="text-end border-bottom">${formatear(propiedadPlanta)}</td><td></td></tr>
-        <tr class="fila-totales"><td>Total Activo No Corriente</td><td></td><td class="text-end border-bottom border-dark">${formatear(propiedadPlanta)}</td></tr>
-        <tr class="table-success fw-bold fs-5"><td>TOTAL ACTIVO</td><td></td><td class="text-end">${formatear(totalActivo)}</td></tr>
+        <tr class="subgrupo-header"><td colspan="3">Activo No Corriente</td></tr>
+        <tr><td class="sangria-1">Propiedad, planta y equipo</td><td class="text-end font-monospace">${formatear(propiedadPlanta)}</td><td></td></tr>
+        <tr class="fila-totales"><td>Total Activo No Corriente</td><td></td><td class="text-end font-monospace">${formatear(propiedadPlanta)}</td></tr>
+        <tr class="table-success-premium fs-6"><td colspan="2">TOTAL ACTIVO</td><td class="text-end font-monospace">${formatear(totalActivo)}</td></tr>
 
         <tr class="grupo-header"><td colspan="3">PASIVO Y PATRIMONIO</td></tr>
-        <tr class="table-light fw-bold"><td colspan="3">Pasivos Corrientes</td></tr>
-        <tr><td class="sangria-1">Préstamos bancarios por pagar</td><td class="text-end">${formatear(prestamos)}</td><td></td></tr>
-        <tr><td class="sangria-1">Cuentas por pagar comerciales</td><td class="text-end">${formatear(cuentasPagar)}</td><td></td></tr>
-        <tr><td class="sangria-1">IVA - Débito Fiscal</td><td class="text-end border-bottom">${formatear(ivaDebito)}</td><td></td></tr>
-        <tr class="fila-totales"><td>Total Pasivo</td><td></td><td class="text-end">${formatear(totalPasivo)}</td></tr>
+        <tr class="subgrupo-header"><td colspan="3">Pasivos Corrientes</td></tr>
+        <tr><td class="sangria-1">Préstamos bancarios por pagar</td><td class="text-end font-monospace border-0">${formatear(prestamos)}</td><td class="border-0"></td></tr>
+        <tr><td class="sangria-1">Cuentas por pagar comerciales</td><td class="text-end font-monospace border-0">${formatear(cuentasPagar)}</td><td class="border-0"></td></tr>
+        <tr><td class="sangria-1">IVA - Débito Fiscal</td><td class="text-end font-monospace">${formatear(ivaDebito)}</td><td></td></tr>
+        <tr class="fila-totales"><td>Total Pasivo</td><td></td><td class="text-end font-monospace">${formatear(totalPasivo)}</td></tr>
 
-        <tr class="table-light fw-bold"><td colspan="3">Patrimonio</td></tr>
-        <tr><td class="sangria-1">Capital Social</td><td class="text-end">${formatear(capitalSocial)}</td><td></td></tr>
-        <tr><td class="sangria-1 text-primary fw-bold">Utilidad del Ejercicio</td><td class="text-end border-bottom text-primary fw-bold">${formatear(utilidadEjercicio)}</td><td></td></tr>
-        <tr class="fila-totales"><td>Total Patrimonio</td><td></td><td class="text-end border-bottom border-dark">${formatear(totalPatrimonio)}</td></tr>
+        <tr class="subgrupo-header"><td colspan="3">Patrimonio</td></tr>
+        <tr><td class="sangria-1">Capital Social</td><td class="text-end font-monospace border-0">${formatear(capitalSocial)}</td><td class="border-0"></td></tr>
+        <tr><td class="sangria-1 text-primary fw-bold">Utilidad del Ejercicio</td><td class="text-end text-primary fw-bold font-monospace">${formatear(utilidadEjercicio)}</td><td></td></tr>
+        <tr class="fila-totales"><td>Total Patrimonio</td><td></td><td class="text-end font-monospace">${formatear(totalPatrimonio)}</td></tr>
         
-        <tr class="fw-bold fs-5 ${colorCuadre}"><td>TOTAL PASIVO + PATRIMONIO</td><td></td><td class="text-end">${formatear(pasivoMasPatrimonio)}</td></tr>
+        <tr class="${colorCuadre} fs-6"><td colspan="2">TOTAL PASIVO + PATRIMONIO</td><td class="text-end font-monospace">${formatear(pasivoMasPatrimonio)}</td></tr>
     `;
 
     document.getElementById('cuerpo-balance').innerHTML = html;
