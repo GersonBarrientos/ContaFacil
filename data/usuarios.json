@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "empresa_id": "e1",
+    "nombre_empresa": "Tech Solutions SA",
+    "email": "admin@empresa1.com",
+    "password": "1234"
+  },
+  {
+    "id": 2,
+    "empresa_id": "e2",
+    "nombre_empresa": "Constructora Global",
+    "email": "admin@empresa2.com",
+    "password": "1234"
+  }
+]

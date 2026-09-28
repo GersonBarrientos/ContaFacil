@@ -1,4 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Establecer la fecha de hoy por defecto en el input nativo
+    const inputFecha = document.getElementById('fecha_movimiento');
+    if (inputFecha) {
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        inputFecha.value = `${yyyy}-${mm}-${dd}`;
+    }
+
     const formulario = document.getElementById('formularioKardex');
     const selectTipoMovimiento = document.getElementById('tipo_movimiento');
     const inputCuenta = document.getElementById('cuenta_contable');

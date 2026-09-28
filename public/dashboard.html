@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Inicio - ContaFácil</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+    
+    <div id="appNavbar"></div>
+
+    <style>
+        .welcome-header {
+            color: var(--color-primary, #2C5282);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .welcome-sub {
+            color: var(--color-text-muted, #718096);
+            font-size: 1.15rem;
+        }
+        .module-card {
+            border: 1px solid var(--color-border, #E2E8F0);
+            border-radius: 16px;
+            background-color: var(--color-bg-card, #FFFFFF);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+            color: var(--color-text-main, #1A202C);
+        }
+        .module-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(44, 82, 130, 0.1) !important;
+            border-color: var(--color-secondary, #00A896);
+            color: var(--color-text-main, #1A202C);
+        }
+        .icon-wrapper {
+            width: 75px;
+            height: 75px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            background-color: rgba(44, 82, 130, 0.06);
+            color: var(--color-primary, #2C5282);
+            transition: all 0.3s ease;
+        }
+        .module-card:hover .icon-wrapper {
+            background-color: var(--color-primary, #2C5282);
+            color: white;
+            transform: scale(1.1) rotate(-4deg);
+        }
+        .module-card.turquesa:hover .icon-wrapper { background-color: var(--color-secondary, #00A896); }
+        .module-card.verde:hover .icon-wrapper { background-color: var(--color-success, #2E7D32); }
+        .module-card.naranja:hover .icon-wrapper { background-color: var(--color-warning, #DD6B20); }
+        
+        .card-title-custom {
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .card-text-custom {
+            color: var(--color-text-muted, #718096);
+            font-size: 0.95rem;
+            margin-bottom: 0;
+            line-height: 1.4;
+        }
+        .modules-grid {
+            animation: fadeIn 0.8s ease-out;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <div class="container mt-5 mb-5 text-center modules-grid">
+        <h1 class="display-4 welcome-header mb-2">Bienvenido a ContaFácil</h1>
+        <p class="welcome-sub mb-5">Selecciona un módulo para comenzar a trabajar</p>
+        
+        <div class="row justify-content-center g-4">
+            <!-- Libro Diario -->
+            <div class="col-md-6 col-lg-4">
+                <a href="/libro-diario.html" class="card shadow-sm module-card h-100 p-4">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-journal-text fs-2"></i>
+                    </div>
+                    <h4 class="card-title-custom">Libro Diario</h4>
+                    <p class="card-text-custom">Registra y consulta tus partidas contables diarias.</p>
+                </a>
+            </div>
+            
+            <!-- Mayorización -->
+            <div class="col-md-6 col-lg-4">
+                <a href="/mayorizacion.html" class="card shadow-sm module-card turquesa h-100 p-4">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-book fs-2"></i>
+                    </div>
+                    <h4 class="card-title-custom">Mayorización</h4>
+                    <p class="card-text-custom">Visualiza los movimientos consolidados por cuenta.</p>
+                </a>
+            </div>
+
+            <!-- Balance de Comprobación -->
+            <div class="col-md-6 col-lg-4">
+                <a href="/balance-comprobacion.html" class="card shadow-sm module-card verde h-100 p-4">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-ui-checks fs-2"></i>
+                    </div>
+                    <h4 class="card-title-custom">Balance Comp.</h4>
+                    <p class="card-text-custom">Verifica sumas y saldos para un cuadre perfecto.</p>
+                </a>
+            </div>
+
+            <!-- Estado de Resultados -->
+            <div class="col-md-6 col-lg-4">
+                <a href="/estado-resultados.html" class="card shadow-sm module-card naranja h-100 p-4">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-graph-up-arrow fs-2"></i>
+                    </div>
+                    <h4 class="card-title-custom">E. de Resultados</h4>
+                    <p class="card-text-custom">Analiza los ingresos, costos y gastos de la empresa.</p>
+                </a>
+            </div>
+
+            <!-- Balance General -->
+            <div class="col-md-6 col-lg-4">
+                <a href="/balance-general.html" class="card shadow-sm module-card h-100 p-4">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-bank fs-2"></i>
+                    </div>
+                    <h4 class="card-title-custom">Balance General</h4>
+                    <p class="card-text-custom">Conoce la situación financiera real y patrimonio.</p>
+                </a>
+            </div>
+
+            <!-- Kardex -->
+            <div class="col-md-6 col-lg-4">
+                <a href="/kardex.html" class="card shadow-sm module-card turquesa h-100 p-4">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-box-seam fs-2"></i>
+                    </div>
+                    <h4 class="card-title-custom">Tarjeta Kardex</h4>
+                    <p class="card-text-custom">Control de inventario por método Costo Promedio.</p>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/navbar.js?v=4"></script>
+</body>
+</html>

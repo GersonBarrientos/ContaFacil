@@ -6,10 +6,26 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <style>
         /* Tipografía Premium */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
+            background-color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+        }
+
+        /* Estilizar input de fecha nativo (Ocultar icono feo de webkit) */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
             color: #1e293b;
@@ -116,7 +132,7 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
                             <label class="form-label text-muted small fw-bold">Fecha *</label>
-                            <input type="date" class="form-control bg-light border-0" id="fecha_movimiento" required>
+                            <input type="date" class="form-control bg-light border-0 fw-medium text-secondary" id="fecha_movimiento" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label text-muted small fw-bold">Tipo de Movimiento *</label>
@@ -241,7 +257,7 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/navbar.js"></script>
+    <script src="/js/navbar.js?v=4"></script>
     <script src="/js/kardex.js"></script>
 </body>
 </html>

@@ -12,7 +12,11 @@ app.use(cors());
 app.use(express.json()); 
 
 // VISTA
-app.use(express.static('public')); 
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    next();
+});
+app.use(express.static('public', { etag: false })); 
 
 // RUTAS
 app.use('/api', apiRoutes);

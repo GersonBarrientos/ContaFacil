@@ -2,28 +2,53 @@ const { pool } = require('../db');
 
 const obtenerEmpresaActual = async idEmpresa => {
     const { rows } = await pool.query(`
-        SELECT id_empresa, nombre_legal, nombre_comercial, nit, nrc, giro_comercial,
-               direccion, telefono, email, logo, moneda, pais
-        FROM public.empresas
-        WHERE id_empresa = $1 AND estado = 'ACTIVO'
+        SELECT e.id_empresa, e.nombre_legal, e.nombre_comercial, e.nit, e.nrc, e.giro_comercial,
+               e.direccion, e.telefono, e.email, e.logo, e.moneda, e.pais,
+               u.email as login_email
+        FROM public.empresas e
+        LEFT JOIN public.usuarios u ON u.id_empresa = e.id_empresa AND u.rol = 'admin' AND u.estado = 'ACTIVO'
+        WHERE e.id_empresa = $1 AND e.estado = 'ACTIVO'
+        LIMIT 1
     `, [idEmpresa]);
     return rows[0] || null;
 };
 
 const actualizarEmpresa = async (idEmpresa, empresa) => {
-    const { rowCount } = await pool.query(`
-        UPDATE public.empresas
-        SET nombre_legal = $1, nombre_comercial = $2, nit = $3, nrc = $4,
-            giro_comercial = $5, direccion = $6, telefono = $7, email = $8,
-            logo = $9, moneda = $10, pais = $11, updated_at = now()
-        WHERE id_empresa = $12
-    `, [
-        empresa.nombre_legal, empresa.nombre_comercial || null, empresa.nit || null,
-        empresa.nrc || null, empresa.giro_comercial || null, empresa.direccion || null,
-        empresa.telefono || null, empresa.email || null, empresa.logo || null,
-        empresa.moneda || 'USD', empresa.pais || 'El Salvador', idEmpresa
-    ]);
-    return rowCount > 0;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const { rowCount } = await client.query(`
+            UPDATE public.empresas
+            SET nombre_legal = $1, nombre_comercial = $2, nit = $3, nrc = $4,
+                giro_comercial = $5, direccion = $6, telefono = $7, email = $8,
+                logo = $9, moneda = $10, pais = $11, updated_at = now()
+            WHERE id_empresa = $12
+        `, [
+            empresa.nombre_legal, empresa.nombre_comercial || null, empresa.nit || null,
+            empresa.nrc || null, empresa.giro_comercial || null, empresa.direccion || null,
+            empresa.telefono || null, empresa.email || null, empresa.logo || null,
+            empresa.moneda || 'USD', empresa.pais || 'El Salvador', idEmpresa
+        ]);
+
+        if (empresa.login_email) {
+            let updateQuery = `UPDATE public.usuarios SET email = $1`;
+            let params = [empresa.login_email, idEmpresa];
+            if (empresa.login_password && empresa.login_password.trim() !== '') {
+                updateQuery += `, password = $3`;
+                params.push(empresa.login_password.trim());
+            }
+            updateQuery += ` WHERE id_empresa = $2 AND rol = 'admin' AND estado = 'ACTIVO'`;
+            await client.query(updateQuery, params);
+        }
+
+        await client.query('COMMIT');
+        return rowCount > 0;
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
 };
 
 const obtenerLibros = async (idEmpresa, incluirInactivos = false) => {

@@ -90,8 +90,12 @@ const navbar = `
             <div class="d-flex align-items-center ms-auto mt-3 mt-xl-0 pb-1 pb-xl-0">
                 
                 <a href="#" data-bs-toggle="modal" data-bs-target="#modalEmpresa" class="d-flex align-items-center justify-content-center text-decoration-none shadow-sm rounded-circle" style="width: 40px; height: 40px; background-color: #fff; border: 2px solid #e2e8f0; transition: border-color 0.2s;" title="Configuración de Empresa" onmouseover="this.style.borderColor='#0d9488'" onmouseout="this.style.borderColor='#e2e8f0'">
-                    <img src="img/ISOTIPO.PNG" alt="Configuración" style="width: 22px; height: 22px; object-fit: contain;">
+                    <img id="navbarConfigLogo" src="img/ISOTIPO.PNG" alt="Configuración" style="width: 22px; height: 22px; object-fit: contain;">
                 </a>
+                
+                <button class="btn btn-outline-danger border-0 rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-2" style="width: 40px; height: 40px;" onclick="localStorage.removeItem('idEmpresa'); localStorage.removeItem('idUsuario'); localStorage.removeItem('empresa_id'); localStorage.removeItem('empresa_email'); window.location.href='index.html';" title="Cerrar Sesión">
+                    <i class="bi bi-box-arrow-right"></i>
+                </button>
             </div>
             
         </div>
@@ -189,12 +193,40 @@ const navbar = `
                         </div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold small text-muted mb-1">URL del Logotipo</label>
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-image text-muted"></i></span>
-                            <input name="logo" class="form-control border-start-0 ps-0 bg-light" placeholder="Ej. img/LOGOTIPO.png">
+                        <label class="form-label fw-semibold small text-muted mb-1">Logotipo de la Empresa</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-light border rounded d-flex align-items-center justify-content-center overflow-hidden shadow-sm" style="width: 65px; height: 65px; flex-shrink: 0;">
+                                <img id="logo_preview_img" src="img/ISOTIPO.PNG" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            </div>
+                            <div class="flex-grow-1">
+                                <input type="file" id="logo_file_input" class="form-control form-control-sm bg-light" accept="image/png, image/jpeg, image/jpg">
+                                <input type="hidden" name="logo" id="logo_base64_input">
+                                <div class="form-text small" style="color: var(--color-text-muted);">Selecciona una imagen (PNG/JPG). Se guardará al hacer clic en "Guardar".</div>
+                            </div>
                         </div>
-                        <div class="form-text small" style="color: var(--color-text-muted);">Usa imágenes PNG con fondo transparente para tus reportes.</div>
+                    </div>
+                    
+                    <!-- Sección 4: Credenciales de Acceso -->
+                    <div class="col-12 mb-1 mt-3">
+                        <h6 class="fw-bold mb-2 mt-2" style="color: var(--color-danger); border-bottom: 2px solid var(--color-border); padding-bottom: 8px;">
+                            <i class="bi bi-shield-lock me-2 text-secondary"></i>Credenciales de Acceso (Administrador)
+                        </h6>
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <label class="form-label fw-semibold small text-muted mb-1">Correo Electrónico (Login)</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+                            <input name="login_email" type="email" class="form-control border-start-0 ps-0 bg-light" placeholder="admin@empresa.com">
+                        </div>
+                        <div class="form-text small" style="color: var(--color-text-muted);">Correo para iniciar sesión.</div>
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <label class="form-label fw-semibold small text-muted mb-1">Nueva Contraseña</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-key text-muted"></i></span>
+                            <input name="login_password" type="password" class="form-control border-start-0 ps-0 bg-light" placeholder="Dejar en blanco para no cambiar">
+                        </div>
+                        <div class="form-text small" style="color: var(--color-text-muted);">Déjalo vacío si no deseas cambiarla.</div>
                     </div>
                 </form>
             </div>
@@ -241,18 +273,8 @@ function initEmpresaLogic() {
     };
 
     const updateEmpresaLogo = (logoUrl) => {
-        const logoEl = document.getElementById('navLogoEmpresa');
-        const iconEl = document.getElementById('navIconEmpresa');
-        if (logoEl && iconEl) {
-            if (logoUrl) {
-                logoEl.src = logoUrl;
-                logoEl.style.display = 'block';
-                iconEl.style.display = 'none';
-            } else {
-                logoEl.style.display = 'none';
-                iconEl.style.display = 'block';
-            }
-        }
+        const logoEl = document.getElementById('navbarConfigLogo');
+        if (logoEl) logoEl.src = logoUrl || 'img/ISOTIPO.PNG';
     };
 
     const renderPlantillaImpresion = (data) => {
@@ -337,8 +359,15 @@ function initEmpresaLogic() {
             updateEmpresaLogo(data.logo);
 
             Object.entries(data).forEach(([key, value]) => {
-                const input = form.elements[key];
-                if (input) input.value = value || '';
+                if (key === 'logo') {
+                    const base64Input = document.getElementById('logo_base64_input');
+                    const previewImg = document.getElementById('logo_preview_img');
+                    if (base64Input) base64Input.value = value || '';
+                    if (previewImg) previewImg.src = value || 'img/ISOTIPO.PNG';
+                } else {
+                    const input = form.elements[key];
+                    if (input) input.value = value || '';
+                }
             });
 
             renderPlantillaImpresion(data);
@@ -389,3 +418,26 @@ function initEmpresaLogic() {
 
     cargarEmpresa();
 }
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        const logoFileInput = document.getElementById('logo_file_input');
+        const logoBase64Input = document.getElementById('logo_base64_input');
+        const logoPreviewImg = document.getElementById('logo_preview_img');
+        if (logoFileInput && logoBase64Input && logoPreviewImg) {
+            logoFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const base64String = event.target.result;
+                        logoBase64Input.value = base64String;
+                        logoPreviewImg.src = base64String;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    }, 500); // wait for navbar render
+});

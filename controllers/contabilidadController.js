@@ -40,6 +40,9 @@ const actualizarEmpresa = async (req, res) => {
         res.json(await ContabilidadModel.obtenerEmpresaActual(idEmpresa));
     } catch (error) {
         console.error('Error actualizando empresa:', error);
+        if (error.code === '23505' && error.constraint === 'usuarios_email_key') {
+            return res.status(400).json({ error: 'El correo de acceso ya está en uso por otro usuario.' });
+        }
         res.status(500).json({ error: 'Error al guardar la configuración de la empresa' });
     }
 };
