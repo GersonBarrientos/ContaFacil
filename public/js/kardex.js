@@ -1,5 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Establecer la fecha de hoy por defecto en el input nativo
+    // 1. VERIFICACIÓN DE SESIÓN (Protección de ruta)
+    const idEmpresa = localStorage.getItem('empresa_id') || localStorage.getItem('idEmpresa');
+    if (!idEmpresa) {
+        alert('Debes iniciar sesión para acceder al Kardex.');
+        window.location.href = '/index.html'; // Lo expulsa al inicio de sesión
+        return;
+    }
+
     const inputFecha = document.getElementById('fecha_movimiento');
     if (inputFecha) {
         const hoy = new Date();
@@ -15,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputArticulo = document.getElementById('articulo');
     const btnGuardar = formulario ? formulario.querySelector('button[type="submit"]') : null;
     
-    // Botones de las vistas y buscador
     const btnVerGlobal = document.getElementById('btnVerGlobal');
     const btnVerIndividual = document.getElementById('btnVerIndividual');
     const cajaBuscador = document.getElementById('cajaBuscador');
@@ -76,7 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function actualizarListaArticulos() {
         if (!inputBuscar) return;
         try {
-            const res = await fetch('/api/kardex-articulos');
+            // Se envía idEmpresa en la URL
+            const res = await fetch(`/api/kardex-articulos/${idEmpresa}`);
             if (res.ok) {
                 const articulos = await res.json();
                 inputBuscar.innerHTML = '<option value="" selected disabled>Seleccione un artículo...</option>';
@@ -113,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const articuloGuardado = inputArticulo.value.trim();
                 const datos = {
+                    id_empresa: idEmpresa, // Se envía la empresa dueña del registro
                     fecha_movimiento: document.getElementById('fecha_movimiento').value,
                     articulo: articuloGuardado,
                     cuenta_contable: inputCuenta.value,
@@ -162,7 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.anularMovimiento = async function(id_movimiento) {
         if(confirm('¿Estás seguro de anular el último movimiento? Esto revertirá el saldo.')) {
-            const res = await fetch(`/api/kardex/${id_movimiento}`, { method: 'DELETE' });
+            // Se envía idEmpresa en la URL por seguridad para que nadie borre cosas de otra empresa
+            const res = await fetch(`/api/kardex/${id_movimiento}/${idEmpresa}`, { method: 'DELETE' });
             if (res.ok) {
                 alert('Movimiento anulado.');
                 cargarHistorial(filtroActual);
@@ -180,7 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         try {
-            const res = await fetch(`/api/kardex/${filtro}`);
+            // Se envía idEmpresa en la URL
+            const res = await fetch(`/api/kardex/${filtro}/${idEmpresa}`);
             const datos = await res.json();
             
             const tbody = document.getElementById('cuerpoTablaKardex');
@@ -198,7 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             datos.forEach((mov, index) => {
                 const esEntrada = mov.tipo_movimiento === 'INVENTARIO_INICIAL' || mov.tipo_movimiento === 'COMPRA' || mov.tipo_movimiento === 'DEV_VENTA';
-
                 const fechaLimpia = mov.fecha ? new Date(mov.fecha).toLocaleDateString('es-SV', { timeZone: 'UTC' }) : '';
                 
                 const btnAnular = (index === datos.length - 1) 
@@ -209,7 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? `<a href="#" onclick="abrirIndividual('${mov.codigo_articulo}')" class="text-decoration-none fw-bold text-primary" title="Ver kardex de ${mov.codigo_articulo}">${mov.codigo_articulo}</a>`
                     : `<span class="fw-bold">${mov.codigo_articulo}</span>`;
 
-                // Todo forzado visualmente a 2 decimales para estética contable
                 tbody.innerHTML += `
                     <tr>
                         <td>${fechaLimpia}</td>

@@ -5,7 +5,7 @@ const router = express.Router();
 const {
     obtenerEmpresa, actualizarEmpresa, obtenerLibros, crearLibro, actualizarLibro, eliminarLibro,
     obtenerCuentas, crearAsiento, getHistorial, obtenerMayorizacion, obtenerBalanceComprobacion,
-    getEstadoResultados, getBalanceGeneral // <-- 1. Importamos la función del Balance General
+    getEstadoResultados, getBalanceGeneral 
 } = require('../controllers/contabilidadController');
 
 const kardexController = require('../controllers/kardexController');
@@ -43,14 +43,12 @@ router.post('/registro', async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // Validar si el email ya existe
         const { rows: existingUsers } = await client.query('SELECT email FROM public.usuarios WHERE email = $1', [email]);
         if (existingUsers.length > 0) {
             await client.query('ROLLBACK');
             return res.status(400).json({ error: 'El correo ya está registrado.' });
         }
 
-        // Crear la nueva empresa
         const insertEmpresa = `
             INSERT INTO public.empresas (nombre_legal, moneda, pais, estado)
             VALUES ($1, 'USD', 'El Salvador', 'ACTIVO')
@@ -59,7 +57,6 @@ router.post('/registro', async (req, res) => {
         const { rows: empresaRows } = await client.query(insertEmpresa, [nombre_legal]);
         const id_empresa = empresaRows[0].id_empresa;
 
-        // Crear el usuario admin para la empresa
         const nombre_usuario = 'Admin ' + nombre_legal;
         const insertUsuario = `
             INSERT INTO public.usuarios (id_empresa, nombre, email, password, rol, estado)
@@ -69,11 +66,7 @@ router.post('/registro', async (req, res) => {
         const { rows: userRows } = await client.query(insertUsuario, [id_empresa, nombre_usuario, email, password]);
         const user = userRows[0];
 
-        // Opcional: Podríamos pre-crear un libro mayor por defecto u otros catálogos si quisiéramos.
-
         await client.query('COMMIT');
-        
-        // Loguear automáticamente
         res.json({ ok: true, empresa_id: id_empresa, email: email, nombre: user.nombre });
         
     } catch (error) {
@@ -84,8 +77,6 @@ router.post('/registro', async (req, res) => {
         client.release();
     }
 });
-
-// ------------------------------------------
 
 router.get('/health', async (req, res) => {
     try {
@@ -107,17 +98,13 @@ router.get('/mayorizacion', obtenerMayorizacion);
 router.get('/balance-comprobacion', obtenerBalanceComprobacion);
 router.get('/cuentas', obtenerCuentas);
 router.post('/asientos', crearAsiento);
-
-// Ruta del Estado de Resultados
 router.get('/estado-resultados', getEstadoResultados);
+router.get('/balance-cuentas', getBalanceGeneral); 
 
-// Ruta del Balance General
-router.get('/balance-cuentas', getBalanceGeneral); // <-- 2. Declaramos la ruta pública del Balance
-
-// Rutas del Kardex
-router.get('/kardex-articulos', kardexController.obtenerListaArticulos); 
+// --- RUTAS DEL KARDEX (ACTUALIZADAS PARA MULTI-EMPRESA) ---
+router.get('/kardex-articulos/:id_empresa', kardexController.obtenerListaArticulos); 
 router.post('/kardex', kardexController.registrarMovimientoKardex);
-router.get('/kardex/:filtro', kardexController.obtenerKardex);
-router.delete('/kardex/:id_movimiento', kardexController.anularUltimo);
+router.get('/kardex/:filtro/:id_empresa', kardexController.obtenerKardex);
+router.delete('/kardex/:id_movimiento/:id_empresa', kardexController.anularUltimo);
 
 module.exports = router;
